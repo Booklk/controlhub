@@ -83,6 +83,7 @@ import { registerTaskRoutes } from "./routes/tasks.routes";
 import { registerTicketRoutes } from "./routes/tickets.routes";
 import { registerDataWarehouseRoutes } from "./routes/dataWarehouse.routes";
 import { registerDataAnalyticsRoutes } from "./routes/dataAnalytics.routes";
+import { registerReportRoutes } from "./routes/reports.routes";
 
 // Security: JWT secrets MUST come from environment variables in production
 const JWT_ACCESS_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
@@ -619,6 +620,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   registerDashboardRoutes(app);
   registerDataWarehouseRoutes(app);
   registerDataAnalyticsRoutes(app);
+  registerReportRoutes(app);
 
   // ==================== Smart Intelligence Endpoints ====================
 
