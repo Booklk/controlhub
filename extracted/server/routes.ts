@@ -891,7 +891,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
 
       await storage.createAuditLog({
-        userId: req.user?.id || 1,
+        userId: req.user?.id || null,
         action: 'create',
         entityType: 'evidence',
         entityId: evidence.id,
@@ -1883,7 +1883,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const requestData = {
         ...req.body,
-        requestedBy: req.user?.id || 1,
+        requestedBy: req.user?.id || null,
       };
       const request = await storage.createDmoRequest(requestData);
       
@@ -3330,7 +3330,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const insertId = result.id;
       
       await storage.createAuditLog({
-        userId: req.user?.id || 1,
+        userId: req.user?.id || null,
         action: 'create',
         entityType: 'external_system',
         entityId: insertId,
@@ -3921,7 +3921,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const insertId = result.id;
       
       await storage.createAuditLog({
-        userId: req.user?.id || 1,
+        userId: req.user?.id || null,
         action: 'create',
         entityType: 'vendor',
         entityId: insertId,
@@ -4070,7 +4070,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const insertId = result.id;
       
       await storage.createAuditLog({
-        userId: req.user?.id || 1,
+        userId: req.user?.id || null,
         action: 'create',
         entityType: 'sla_agreement',
         entityId: insertId,
@@ -5026,7 +5026,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
 
       await storage.createAuditLog({
-        userId: req.user?.id || 1,
+        userId: req.user?.id || null,
         action: 'create',
         entityType: 'committee_meeting',
         entityId: meeting.id,
@@ -5095,7 +5095,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       await storage.createAuditLog({
-        userId: req.user?.id || 1,
+        userId: req.user?.id || null,
         action: 'update',
         entityType: 'committee_meeting',
         entityId: meetingId,
@@ -5121,7 +5121,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await storage.updateCommitteeMeeting(meetingId, { deletedAt: new Date() } as any);
 
       await storage.createAuditLog({
-        userId: req.user?.id || 1,
+        userId: req.user?.id || null,
         action: 'delete',
         entityType: 'committee_meeting',
         entityId: meetingId,
@@ -5527,7 +5527,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         notes: notes || null,
         createdBy: req.user?.id || null,
       }).returning();
-      await storage.createAuditLog({ userId: req.user?.id || 1, action: 'create', entityType: 'committee_task', entityId: task.id, details: `إنشاء مهمة لجنة: ${title}` });
+      await storage.createAuditLog({ userId: req.user?.id || null, action: 'create', entityType: 'committee_task', entityId: task.id, details: `إنشاء مهمة لجنة: ${title}` });
       res.status(201).json(task);
     } catch (error) {
       logger.error('Error creating committee task:', { error });

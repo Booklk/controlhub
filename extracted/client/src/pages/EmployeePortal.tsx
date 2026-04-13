@@ -342,12 +342,12 @@ export default function EmployeePortal() {
   });
 
   const markReadMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("PATCH", `/api/notifications/${id}/read`),
+    mutationFn: (id: number) => apiRequest("PUT", `/api/notifications/${id}/read`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
   });
 
   const markAllReadMutation = useMutation({
-    mutationFn: () => apiRequest("PATCH", "/api/notifications/read-all"),
+    mutationFn: () => apiRequest("PUT", "/api/notifications/read-all"),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
   });
 

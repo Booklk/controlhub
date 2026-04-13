@@ -374,7 +374,7 @@ export default function CommandCenter() {
   });
 
   const { data: incidents = [] } = useQuery<any[]>({
-    queryKey: ["/api/security/incidents"],
+    queryKey: ["/api/security-incidents"],
     select: (d: any) => Array.isArray(d) ? d : d?.incidents || [],
     refetchInterval: 5 * 60 * 1000,
     staleTime: 2 * 60 * 1000,
