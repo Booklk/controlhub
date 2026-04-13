@@ -23,13 +23,14 @@ import {
   RefreshCw, Sparkles, Eye, RotateCcw, FileDown, FileSpreadsheet,
   Mail, Download, Wifi, WifiOff, Timer, TrendingUp, AlertTriangle,
   ChevronDown, MoreHorizontal, PlayCircle, CheckSquare, Forward, Inbox,
-  History, MessageSquare, Star, Zap, Shield, Activity
+  History, MessageSquare, Star, Zap, Shield, Activity, Pencil
 } from "lucide-react";
 import { exportToPDF, exportToExcel } from "@/lib/exports";
 import { PageHeader, KpiCard } from "@/components/Quality";
 import { IT_DEPARTMENTS_LIST } from "@/lib/permissions";
 import { FileAttachment, type FileAttachmentData } from "@/components/FileAttachment";
 import { FormSuccessPanel } from "@/components/ui/form-guide";
+import { useAuth } from "@/lib/auth";
 
 interface Referral {
   id: number;
@@ -130,10 +131,12 @@ function SLABadge({ referral }: { referral: Referral }) {
 
 export default function ITReferrals() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [tab, setTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [createdRefNumber, setCreatedRefNumber] = useState<string | null>(null);
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -230,6 +233,21 @@ export default function ITReferrals() {
       toast({ title: "✅ تم حفظ المرفقات" });
     },
     onError: (error: Error) => toast({ title: "خطأ في حفظ المرفقات", description: error.message, variant: "destructive" })
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: typeof newReferral) => {
+      const res = await apiRequest('PUT', `/api/it-referrals/${editingItem?.id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidateRelatedQueries('/api/it-referrals');
+      toast({ title: "✅ تم تحديث الإحالة بنجاح" });
+      setIsCreateOpen(false);
+      setEditingItem(null);
+      setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: 9, toDepartmentId: 10, reason: "", dueDate: "", slaHours: 48, attachments: [] });
+    },
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" })
   });
 
   const deleteMutation = useMutation({
@@ -563,6 +581,23 @@ export default function ITReferrals() {
                         data-testid={`button-delegate-${ref.id}`}>
                         <Forward className="w-3 h-3 ml-1" /> تفويض
                       </Button>
+                      {user?.id === ref.referredById && (
+                        <Button size="sm" variant="outline"
+                          className="text-[11px] h-7 border-amber-200 text-amber-700 hover:bg-amber-50"
+                          onClick={() => {
+                            setEditingItem(ref);
+                            setNewReferral({
+                              type: ref.type, title: ref.title, description: ref.description || '', priority: ref.priority,
+                              fromDepartmentId: ref.fromDepartmentId, toDepartmentId: ref.toDepartmentId,
+                              reason: ref.reason || '', dueDate: ref.dueDate ? ref.dueDate.split('T')[0] : '',
+                              slaHours: ref.slaHours || 48, attachments: ref.attachments || [],
+                            });
+                            setIsCreateOpen(true);
+                          }}
+                          data-testid={`button-edit-${ref.id}`}>
+                          <Pencil className="w-3 h-3 ml-1" /> تعديل
+                        </Button>
+                      )}
                       <Button size="sm" variant="outline"
                         className="text-[11px] h-7 border-navy/20 text-navy/70"
                         onClick={() => openDetail(ref)}
@@ -581,7 +616,7 @@ export default function ITReferrals() {
       {/* ===================== CREATE DIALOG ===================== */}
       <Dialog open={isCreateOpen} onOpenChange={(open) => {
         setIsCreateOpen(open);
-        if (!open) { setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: 9, toDepartmentId: 10, reason: "", dueDate: "", slaHours: 48, attachments: [] }); setCreatedRefNumber(null); }
+        if (!open) { setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: 9, toDepartmentId: 10, reason: "", dueDate: "", slaHours: 48, attachments: [] }); setCreatedRefNumber(null); setEditingItem(null); }
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-white/98 backdrop-blur-xl border-navy/10" data-testid="dialog-create-referral">
           {createdRefNumber ? (
@@ -603,9 +638,9 @@ export default function ITReferrals() {
           <>
           <DialogHeader>
             <DialogTitle className="text-navy text-xl flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-gold" /> إنشاء إحالة جديدة
+              {editingItem ? <><Pencil className="h-5 w-5 text-gold" /> تعديل الإحالة</> : <><Sparkles className="h-5 w-5 text-gold" /> إنشاء إحالة جديدة</>}
             </DialogTitle>
-            <DialogDescription className="text-navy/60">أدخل تفاصيل الإحالة لإرسالها للإدارة المستهدفة</DialogDescription>
+            <DialogDescription className="text-navy/60">{editingItem ? 'تعديل بيانات الإحالة' : 'أدخل تفاصيل الإحالة لإرسالها للإدارة المستهدفة'}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
@@ -755,16 +790,16 @@ export default function ITReferrals() {
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="border-navy/20">إلغاء</Button>
+            <Button variant="outline" onClick={() => { setIsCreateOpen(false); setEditingItem(null); }} className="border-navy/20">إلغاء</Button>
             <LoadingButton
               className="bg-gradient-to-r from-gold to-gold/90 text-navy font-semibold"
-              onClick={() => createMutation.mutate(newReferral)}
+              onClick={() => editingItem ? updateMutation.mutate(newReferral) : createMutation.mutate(newReferral)}
               disabled={!newReferral.title || newReferral.fromDepartmentId === newReferral.toDepartmentId}
-              loading={createMutation.isPending}
-              loadingText="جاري الإرسال..."
+              loading={editingItem ? updateMutation.isPending : createMutation.isPending}
+              loadingText={editingItem ? "جاري التحديث..." : "جاري الإرسال..."}
               data-testid="button-submit-referral"
             >
-              <Send className="h-4 w-4 ml-2" /> إرسال الإحالة
+              {editingItem ? <><Pencil className="h-4 w-4 ml-2" /> تحديث الإحالة</> : <><Send className="h-4 w-4 ml-2" /> إرسال الإحالة</>}
             </LoadingButton>
           </DialogFooter>
           </>

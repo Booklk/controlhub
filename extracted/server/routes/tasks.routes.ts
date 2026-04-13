@@ -28,7 +28,7 @@ export function registerTaskRoutes(app: Express) {
   app.get("/api/department-users", authenticateToken, async (req: any, res) => {
     try {
       const deptId = req.query.departmentId ? parseInt(req.query.departmentId as string) : null;
-      const userDeptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || null;
       const isPrivileged = req.user?.role === 'system_admin' || req.user?.role === 'it_director';
       const targetDeptId = isPrivileged ? (deptId || userDeptId) : (userDeptId || deptId);
 
@@ -228,7 +228,7 @@ export function registerTaskRoutes(app: Express) {
       if (taskData.description) taskData.description = taskData.description.trim();
 
       // Portal isolation: enforce department from user context
-      const taskUserDeptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || null;
+      const taskUserDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || null;
       const isTaskPrivileged = req.user?.role === 'system_admin' || req.user?.role === 'it_director';
       const isTaskEmployee = req.user?.portal === 'employee' || req.user?.role === 'employee';
       const taskRequestedDeptId = taskData.departmentId ? parseInt(taskData.departmentId) : null;

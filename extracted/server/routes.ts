@@ -766,6 +766,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         priority: priority || 'medium',
         complianceLevel: complianceLevel || 'mandatory',
         evidenceType: evidenceType || 'document',
+        isActive: true,
       }).returning();
       res.status(201).json(requirement);
     } catch (error: any) {
@@ -1013,7 +1014,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (globalRoles.includes(user.role)) return true;
     if (allowedPortals && !allowedPortals.includes(user.portal)) return false;
     if (resourceDeptId != null) {
-      const userDeptId = user.itDepartmentId || PORTAL_TO_DEPT_ID[user.portal];
+      const userDeptId = PORTAL_TO_DEPT_ID[user.portal] || user.itDepartmentId;
       if (userDeptId && resourceDeptId !== userDeptId) return false;
     }
     return true;
@@ -11294,7 +11295,7 @@ function registerMissingWorkflowRoutes(app: Express) {
         11: ['digital_transformation'], 12: ['support'],
       };
       const deptId = req.query.departmentId ? parseInt(req.query.departmentId as string) : null;
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
       const targetDeptId = userDeptId || deptId;
       if (!targetDeptId) {
         return res.json([]);

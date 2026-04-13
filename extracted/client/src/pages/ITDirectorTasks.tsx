@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import DashboardLayout from "@/components/DashboardLayout";
 import { itDirectorNavGroups } from "@/lib/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Play, LayoutGrid, List,
   Mail, Sparkles, RefreshCw, Calendar,
   User, Flag, KanbanSquare, Loader2, ChevronDown,
-  Zap, Target, TrendingUp, Eye, Edit, SendHorizontal, X,
+  Zap, Target, TrendingUp, Eye, Edit, SendHorizontal, X, Pencil,
   ClipboardPaste, BarChart3, Timer, CheckCheck, ChevronRight, Download
 } from "lucide-react";
 import { IT_DEPARTMENTS_LIST } from "@/lib/permissions";
@@ -182,6 +182,8 @@ export default function ITDirectorTasks() {
   const [sendToPlannerTask, setSendToPlannerTask] = useState<PlannerTask | null>(null);
   const [selectedDeptForPlanner, setSelectedDeptForPlanner] = useState('');
 
+  const [editingItem, setEditingItem] = useState<any>(null);
+
   const [form, setForm] = useState({
     title: '', description: '', departmentId: '', assignedTo: '',
     priority: 'medium', dueDate: '', notes: '', estimatedHours: '',
@@ -232,6 +234,27 @@ export default function ITDirectorTasks() {
     onError: (e: any) => toast({ title: 'خطأ', description: e.message, variant: 'destructive' }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (data: typeof form) => apiRequest('PATCH', `/api/tasks/${editingItem?.id}`, {
+      title: data.title,
+      description: data.description || null,
+      departmentId: parseInt(data.departmentId),
+      assignedTo: data.assignedTo ? parseInt(data.assignedTo) : null,
+      priority: data.priority,
+      dueDate: data.dueDate || null,
+      notes: data.notes || null,
+      estimatedHours: data.estimatedHours ? parseInt(data.estimatedHours) : null,
+    }),
+    onSuccess: () => {
+      toast({ title: '✅ تم تحديث المهمة', description: `تم تحديث "${form.title}" بنجاح` });
+      queryClient.invalidateQueries({ queryKey: ['/api/director/tasks/overview'] });
+      setCreateOpen(false);
+      setEditingItem(null);
+      resetForm();
+    },
+    onError: (error: Error) => toast({ title: 'خطأ', description: error.message, variant: 'destructive' }),
+  });
+
   const sendToDeptMutation = useMutation({
     mutationFn: ({ id, deptId }: { id: number; deptId: number }) =>
       apiRequest('POST', `/api/planner/tasks/${id}/send-to-tasks`, { targetDepartmentId: deptId }),
@@ -244,7 +267,7 @@ export default function ITDirectorTasks() {
   });
 
   // ─── Helpers ─────────────────────────────────────────────────
-  const resetForm = () => setForm({ title: '', description: '', departmentId: '', assignedTo: '', priority: 'medium', dueDate: '', notes: '', estimatedHours: '', sendEmail: true });
+  const resetForm = () => { setForm({ title: '', description: '', departmentId: '', assignedTo: '', priority: 'medium', dueDate: '', notes: '', estimatedHours: '', sendEmail: true }); setEditingItem(null); };
 
   const applyEmailParse = () => {
     if (!emailText.trim()) return;
@@ -507,9 +530,14 @@ export default function ITDirectorTasks() {
                             <td className="px-4 py-3"><TaskStatusBadge status={t.status} /></td>
                             <td className="px-4 py-3"><DueDateBadge date={t.dueDate} /></td>
                             <td className="px-4 py-3">
-                              <button onClick={e => { e.stopPropagation(); setDetailTask(t); }} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button onClick={e => { e.stopPropagation(); setEditingItem(t); setForm({ title: t.title, description: t.description || '', departmentId: String(t.departmentId || ''), assignedTo: t.assignedTo ? String(t.assignedTo) : '', priority: t.priority, dueDate: t.dueDate ? t.dueDate.split('T')[0] : '', notes: t.notes || '', estimatedHours: t.estimatedHours ? String(t.estimatedHours) : '', sendEmail: false }); setCreateOpen(true); }} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" data-testid={`button-edit-task-${t.id}`}>
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={e => { e.stopPropagation(); setDetailTask(t); }} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -539,7 +567,12 @@ export default function ITDirectorTasks() {
                             <p className="font-semibold text-sm line-clamp-2">{t.title}</p>
                             {t.description && <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{t.description}</p>}
                           </div>
-                          <PriorityDot priority={t.priority} />
+                          <div className="flex items-center gap-1">
+                            <button onClick={e => { e.stopPropagation(); setEditingItem(t); setForm({ title: t.title, description: t.description || '', departmentId: String(t.departmentId || ''), assignedTo: t.assignedTo ? String(t.assignedTo) : '', priority: t.priority, dueDate: t.dueDate ? t.dueDate.split('T')[0] : '', notes: t.notes || '', estimatedHours: t.estimatedHours ? String(t.estimatedHours) : '', sendEmail: false }); setCreateOpen(true); }} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" data-testid={`button-edit-card-task-${t.id}`}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <PriorityDot priority={t.priority} />
+                          </div>
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <TaskStatusBadge status={t.status} />
@@ -614,11 +647,11 @@ export default function ITDirectorTasks() {
         {/* ──────────────────────────────────────────────────────── */}
         {/* CREATE TASK DIALOG                                       */}
         {/* ──────────────────────────────────────────────────────── */}
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { resetForm(); } }}>
           <DialogContent className="max-w-2xl" dir="rtl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-primary" />إنشاء مهمة جديدة
+                {editingItem ? <><Pencil className="w-5 h-5 text-primary" />تعديل المهمة</> : <><Plus className="w-5 h-5 text-primary" />إنشاء مهمة جديدة</>}
               </DialogTitle>
             </DialogHeader>
             <DialogBody className="space-y-4">
@@ -695,15 +728,15 @@ export default function ITDirectorTasks() {
               </div>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>إلغاء</Button>
+              <Button variant="outline" onClick={() => { setCreateOpen(false); resetForm(); }}>إلغاء</Button>
               <Button
-                onClick={() => createMutation.mutate(form)}
-                disabled={createMutation.isPending || !form.title.trim() || !form.departmentId}
+                onClick={() => editingItem ? updateMutation.mutate(form) : createMutation.mutate(form)}
+                disabled={(editingItem ? updateMutation.isPending : createMutation.isPending) || !form.title.trim() || !form.departmentId}
                 className="gap-2"
                 data-testid="button-submit-task"
               >
-                {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                إنشاء المهمة
+                {(editingItem ? updateMutation.isPending : createMutation.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : editingItem ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                {editingItem ? 'تحديث المهمة' : 'إنشاء المهمة'}
               </Button>
             </DialogFooter>
           </DialogContent>

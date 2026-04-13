@@ -27,7 +27,7 @@ import {
 import {
   Shield, CheckCircle2, XCircle, Clock, Plus, MoreVertical,
   FileText, Download, Search, Filter, AlertTriangle, Eye,
-  ShieldCheck, ShieldX, CalendarClock, Users,
+  ShieldCheck, ShieldX, CalendarClock, Users, Pencil,
 } from "lucide-react";
 
 const DMO_DEPARTMENT_ID = 5;
@@ -84,6 +84,7 @@ function getLegalBasisLabel(basis: string): string {
 export default function ConsentManagement() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -127,6 +128,23 @@ export default function ConsentManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/consent-records/stats"] });
       invalidateRelatedQueries('/api/consent-records');
       setIsCreateOpen(false);
+      resetForm();
+    },
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", `/api/consent-records/${editingItem?.id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم تحديث سجل الموافقة بنجاح" });
+      queryClient.invalidateQueries({ queryKey: ["/api/consent-records"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/consent-records/stats"] });
+      invalidateRelatedQueries('/api/consent-records');
+      setIsCreateOpen(false);
+      setEditingItem(null);
       resetForm();
     },
     onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
@@ -177,7 +195,7 @@ export default function ConsentManagement() {
       toast({ title: "تنبيه", description: "يرجى تحديد نوع واحد على الأقل من أنواع البيانات", variant: "destructive" });
       return;
     }
-    createMutation.mutate({
+    const payload = {
       dataSubjectId: Number(form.dataSubjectId),
       purpose: form.purpose || form.purposeAr,
       purposeAr: form.purposeAr,
@@ -187,7 +205,12 @@ export default function ConsentManagement() {
       expiresAt: form.expiresAt || null,
       ipAddress: form.ipAddress || null,
       metadata: form.metadata ? { notes: form.metadata } : null,
-    });
+    };
+    if (editingItem) {
+      updateMutation.mutate(payload);
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
   const toggleDataType = (type: string) => {
@@ -267,7 +290,7 @@ export default function ConsentManagement() {
             </Button>
             <Button
               className="bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={() => { resetForm(); setIsCreateOpen(true); }}
+              onClick={() => { resetForm(); setEditingItem(null); setIsCreateOpen(true); }}
               data-testid="button-create-consent"
             >
               <Plus className="w-4 h-4 ml-2" />
@@ -460,6 +483,22 @@ export default function ConsentManagement() {
                                 <DropdownMenuItem onClick={() => { setSelectedRecord(record); setIsDetailOpen(true); }}>
                                   <Eye className="w-4 h-4 ml-2" /> عرض التفاصيل
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setEditingItem(record);
+                                  setForm({
+                                    dataSubjectId: String(record.dataSubjectId),
+                                    purpose: record.purpose || '',
+                                    purposeAr: record.purposeAr || '',
+                                    legalBasis: record.legalBasis || 'consent',
+                                    dataTypes: record.dataTypes || [],
+                                    expiresAt: record.expiresAt ? record.expiresAt.split('T')[0] : '',
+                                    ipAddress: record.ipAddress || '',
+                                    metadata: record.metadata?.notes || '',
+                                  });
+                                  setIsCreateOpen(true);
+                                }} data-testid={`button-edit-consent-${record.id}`}>
+                                  <Pencil className="w-4 h-4 ml-2" /> تعديل السجل
+                                </DropdownMenuItem>
                                 {status === "active" && (
                                   <DropdownMenuItem
                                     className="text-red-500"
@@ -509,15 +548,14 @@ export default function ConsentManagement() {
         </Card>
 
         {/* Create Dialog */}
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) { resetForm(); setEditingItem(null); } }}>
           <DialogContent className="max-w-2xl bg-[#0d2137] border-white/10 text-white" dir="rtl">
             <DialogHeader>
               <DialogTitle className="text-white flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-amber-400" />
-                تسجيل موافقة جديدة
+                {editingItem ? <><Pencil className="w-5 h-5 text-amber-400" />تعديل سجل الموافقة</> : <><ShieldCheck className="w-5 h-5 text-amber-400" />تسجيل موافقة جديدة</>}
               </DialogTitle>
               <DialogDescription className="text-white/50">
-                تسجيل موافقة صاحب بيانات شخصية وفق متطلبات PDPL
+                {editingItem ? 'تعديل بيانات سجل الموافقة الحالي' : 'تسجيل موافقة صاحب بيانات شخصية وفق متطلبات PDPL'}
               </DialogDescription>
             </DialogHeader>
 
@@ -634,16 +672,16 @@ export default function ConsentManagement() {
             </div>
 
             <DialogFooter className="gap-2 mt-4">
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="border-white/20 text-white" data-testid="button-cancel-create">
+              <Button variant="outline" onClick={() => { setIsCreateOpen(false); setEditingItem(null); resetForm(); }} className="border-white/20 text-white" data-testid="button-cancel-create">
                 إلغاء
               </Button>
               <Button
                 onClick={handleCreate}
-                disabled={createMutation.isPending}
+                disabled={editingItem ? updateMutation.isPending : createMutation.isPending}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
                 data-testid="button-submit-consent"
               >
-                {createMutation.isPending ? "جاري الحفظ..." : "تسجيل الموافقة"}
+                {(editingItem ? updateMutation.isPending : createMutation.isPending) ? "جاري الحفظ..." : editingItem ? "تحديث السجل" : "تسجيل الموافقة"}
               </Button>
             </DialogFooter>
           </DialogContent>

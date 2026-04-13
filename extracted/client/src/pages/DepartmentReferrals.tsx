@@ -22,10 +22,11 @@ import {
   ArrowLeft, Calendar,
   RefreshCw, Eye, Inbox, Send, MessageSquare,
   CheckSquare, AlertTriangle, Timer, Bell, BellRing, ChevronUp,
-  Plus, Shield, Star, Forward, History, Check
+  Plus, Shield, Star, Forward, History, Check, Pencil
 } from "lucide-react";
 import { FileAttachment, type FileAttachmentData } from "@/components/FileAttachment";
 import { FormSuccessPanel } from "@/components/ui/form-guide";
+import { useAuth } from "@/lib/auth";
 import type { NavGroup } from "@/lib/navigation";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -204,11 +205,13 @@ function ReferralActions({ referral, deptId, onAction }: { referral: Referral; d
 }
 
 // ─── Referral Card ────────────────────────────────────────────────────────────
-function ReferralCard({ referral, deptId, onView, onAction, index = 0 }: {
+function ReferralCard({ referral, deptId, onView, onAction, onEdit, currentUserId, index = 0 }: {
   referral: Referral;
   deptId: number;
   onView: (r: Referral) => void;
   onAction: (action: string, r: Referral) => void;
+  onEdit?: (r: Referral) => void;
+  currentUserId?: number;
   index?: number;
 }) {
   const isIncoming = referral.toDepartmentId === deptId;
@@ -265,9 +268,16 @@ function ReferralCard({ referral, deptId, onView, onAction, index = 0 }: {
               </span>
             )}
           </div>
-          <button onClick={() => onView(referral)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white cursor-pointer shrink-0" data-testid={`button-view-referral-${referral.id}`}>
-            <Eye className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            {currentUserId === referral.referredById && onEdit && (
+              <button onClick={(e) => { e.stopPropagation(); onEdit(referral); }} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white cursor-pointer" data-testid={`button-edit-referral-${referral.id}`}>
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
+            <button onClick={() => onView(referral)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white cursor-pointer" data-testid={`button-view-referral-${referral.id}`}>
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Title */}
@@ -312,6 +322,7 @@ function ReferralCard({ referral, deptId, onView, onAction, index = 0 }: {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function DepartmentReferrals({ departmentId, departmentName, navGroups }: DepartmentReferralsProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const dept = getDept(departmentId);
   const otherDepts = DEPARTMENTS.filter(d => d.id !== departmentId);
 
@@ -321,6 +332,7 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
   const [viewingRef, setViewingRef] = useState<Referral | null>(null);
   const [actionDialog, setActionDialog] = useState<{ type: string; referral: Referral } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [createdReferralNum, setCreatedReferralNum] = useState<string | null>(null);
   const [actionNote, setActionNote] = useState("");
   const [delegateToDept, setDelegateToDept] = useState("");
@@ -396,6 +408,18 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
       invalidateAll();
     },
     onError: (e: any) => toast({ title: "خطأ في الإنشاء", description: e.message || "", variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (body: any) => apiRequest('PUT', `/api/it-referrals/${editingItem?.id}`, body).then(r => r.json()),
+    onSuccess: () => {
+      toast({ title: "✅ تم تحديث الإحالة بنجاح" });
+      setCreateOpen(false);
+      setEditingItem(null);
+      setNewTitle(""); setNewDesc(""); setNewReason(""); setNewToDept(""); setNewDueDate(""); setNewSlaHours("48"); setNewPriority("medium"); setNewAttachments([]);
+      invalidateAll();
+    },
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const addAttachmentsMutation = useMutation({
@@ -584,7 +608,18 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
               ) : (
                 <div className="space-y-3">
                   {filtered.map((ref, idx) => (
-                    <ReferralCard key={ref.id} referral={ref} deptId={departmentId} onView={viewReferral} onAction={handleAction} index={idx} />
+                    <ReferralCard key={ref.id} referral={ref} deptId={departmentId} onView={viewReferral} onAction={handleAction} currentUserId={user?.id} onEdit={(r) => {
+                      setEditingItem(r);
+                      setNewTitle(r.title);
+                      setNewDesc(r.description || '');
+                      setNewReason(r.reason || '');
+                      setNewToDept(String(r.toDepartmentId));
+                      setNewDueDate(r.dueDate ? r.dueDate.split('T')[0] : '');
+                      setNewSlaHours(String(r.slaHours || 48));
+                      setNewPriority(r.priority);
+                      setNewAttachments(r.attachments || []);
+                      setCreateOpen(true);
+                    }} index={idx} />
                   ))}
                 </div>
               )}
@@ -800,7 +835,7 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
       {/* ── Create Referral Dialog ────────────────────────────────────────────── */}
       <Dialog open={createOpen} onOpenChange={(open) => {
         setCreateOpen(open);
-        if (!open) { setNewTitle(""); setNewDesc(""); setNewReason(""); setNewToDept(""); setNewDueDate(""); setNewSlaHours("48"); setNewPriority("medium"); setNewAttachments([]); setCreatedReferralNum(null); }
+        if (!open) { setNewTitle(""); setNewDesc(""); setNewReason(""); setNewToDept(""); setNewDueDate(""); setNewSlaHours("48"); setNewPriority("medium"); setNewAttachments([]); setCreatedReferralNum(null); setEditingItem(null); }
       }}>
         <DialogContent className="bg-[#0d1e3d] border-white/15 text-white max-w-lg" dir="rtl">
           {createdReferralNum ? (
@@ -823,9 +858,9 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
           ) : (
           <>
           <DialogHeader>
-            <DialogTitle>إنشاء إحالة جديدة</DialogTitle>
+            <DialogTitle>{editingItem ? <span className="flex items-center gap-2"><Pencil className="w-5 h-5" />تعديل الإحالة</span> : 'إنشاء إحالة جديدة'}</DialogTitle>
             <DialogDescription className="text-white/50">
-              إحالة من <strong className={dept.color}>{dept.name}</strong> إلى إدارة أخرى
+              {editingItem ? 'تعديل بيانات الإحالة' : <>إحالة من <strong className={dept.color}>{dept.name}</strong> إلى إدارة أخرى</>}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[65vh]">
@@ -910,20 +945,27 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
             </div>
           </ScrollArea>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setCreateOpen(false)} className="border-white/20 text-white/60" data-testid="button-cancel-referral">إلغاء</Button>
+            <Button variant="outline" onClick={() => { setCreateOpen(false); setEditingItem(null); }} className="border-white/20 text-white/60" data-testid="button-cancel-referral">إلغاء</Button>
             <Button
               data-testid="button-submit-referral"
-              onClick={() => createMutation.mutate({
-                type: 'general', entityId: 0,
-                title: newTitle, description: newDesc,
-                priority: newPriority, fromDepartmentId: departmentId,
-                toDepartmentId: parseInt(newToDept), reason: newReason,
-                dueDate: newDueDate || null, slaHours: parseInt(newSlaHours),
-              })}
-              disabled={!newTitle || !newToDept || !newReason || createMutation.isPending}
+              onClick={() => {
+                const body = {
+                  type: 'general', entityId: 0,
+                  title: newTitle, description: newDesc,
+                  priority: newPriority, fromDepartmentId: departmentId,
+                  toDepartmentId: parseInt(newToDept), reason: newReason,
+                  dueDate: newDueDate || null, slaHours: parseInt(newSlaHours),
+                };
+                if (editingItem) {
+                  updateMutation.mutate(body);
+                } else {
+                  createMutation.mutate(body);
+                }
+              }}
+              disabled={!newTitle || !newToDept || !newReason || (editingItem ? updateMutation.isPending : createMutation.isPending)}
               className="bg-[#c9a84c] hover:bg-[#b8973b] text-[#0a1628] font-semibold"
             >
-              {createMutation.isPending ? <><RefreshCw className="w-3.5 h-3.5 animate-spin ml-1" />إرسال...</> : <><Send className="w-3.5 h-3.5 ml-1" />إرسال الإحالة</>}
+              {(editingItem ? updateMutation.isPending : createMutation.isPending) ? <><RefreshCw className="w-3.5 h-3.5 animate-spin ml-1" />{editingItem ? 'تحديث...' : 'إرسال...'}</> : editingItem ? <><Pencil className="w-3.5 h-3.5 ml-1" />تحديث الإحالة</> : <><Send className="w-3.5 h-3.5 ml-1" />إرسال الإحالة</>}
             </Button>
           </DialogFooter>
           </>
