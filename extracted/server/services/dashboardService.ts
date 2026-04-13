@@ -4,12 +4,12 @@
  */
 
 import { db } from '../db';
-import { 
-  users, itProjects, itTickets, tasks, committeeDecisions, 
-  auditLogs, securityIncidents, securityVulnerabilities,
-  domains, requirements, evidences
+import {
+  users, itProjects, itTickets, tasks, committeeDecisions, committeeMeetings, votingSessions,
+  auditLogs, securityIncidents, securityVulnerabilities, slaBreaches,
+  domains, requirements, evidences, dataAssets, dmoRequests, dataSubjectRequests
 } from '@shared/schema';
-import { eq, sql, and, gte, lte, count, avg, desc } from 'drizzle-orm';
+import { eq, sql, and, gte, lte, count, avg, desc, isNull } from 'drizzle-orm';
 import { statsCache } from '../cache/statsCache';
 
 export interface DashboardStats {
@@ -174,6 +174,43 @@ class DashboardService {
         })
         .from(itTickets);
 
+      // Real avg resolution time from DB
+      const [resTime] = await db.execute(sql`
+        SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600), 0)::numeric(10,1) as avg_hours
+        FROM it_tickets WHERE status IN ('resolved', 'closed')
+      `);
+      const avgRes = Number((resTime as any).rows?.[0]?.avg_hours || (resTime as any)[0]?.avg_hours || 0);
+
+      // Real SLA data from DB
+      const [slaData] = await db.execute(sql`
+        SELECT
+          COUNT(*)::int as total_tickets,
+          COUNT(CASE WHEN sla_deadline IS NOT NULL AND sla_deadline < NOW() AND status NOT IN ('closed','resolved') THEN 1 END)::int as breaches
+        FROM it_tickets WHERE sla_deadline IS NOT NULL
+      `);
+      const slaRow = (slaData as any).rows?.[0] || (slaData as any)[0] || { total_tickets: 0, breaches: 0 };
+      const slaTotalWithDeadline = Number(slaRow.total_tickets) || 1;
+      const slaBreachCount = Number(slaRow.breaches) || 0;
+      const slaRate = Math.round(((slaTotalWithDeadline - slaBreachCount) / slaTotalWithDeadline) * 100);
+
+      // Real department stats from DB
+      const DEPTS = [
+        { id: 5, name: 'مكتب إدارة البيانات' },
+        { id: 9, name: 'البنية التحتية' },
+        { id: 10, name: 'الأمن السيبراني' },
+        { id: 11, name: 'التحول الرقمي' },
+        { id: 12, name: 'الدعم الفني' },
+      ];
+      const deptStats = await Promise.all(DEPTS.map(async (dept) => {
+        const [deptData] = await db.execute(sql`
+          SELECT
+            (SELECT COUNT(*)::int FROM it_tickets WHERE department_id = ${dept.id} AND status IN ('open','in_progress','assigned')) as open_tickets,
+            (SELECT COUNT(*)::int FROM it_projects WHERE it_department_id = ${dept.id} AND status IN ('planning','in_progress')) as active_projects
+        `);
+        const r = (deptData as any).rows?.[0] || (deptData as any)[0] || {};
+        return { name: dept.name, openTickets: Number(r.open_tickets) || 0, activeProjects: Number(r.active_projects) || 0 };
+      }));
+
       return {
         projects: {
           total: projectsData.total,
@@ -186,18 +223,13 @@ class DashboardService {
           open: Number(ticketsData.open) || 0,
           inProgress: Number(ticketsData.inProgress) || 0,
           resolved: Number(ticketsData.resolved) || 0,
-          avgResolutionTime: 24,
+          avgResolutionTime: avgRes,
         },
         sla: {
-          complianceRate: 95,
-          breaches: 2,
+          complianceRate: slaRate,
+          breaches: slaBreachCount,
         },
-        departments: [
-          { name: 'البنية التحتية', openTickets: 5, activeProjects: 3 },
-          { name: 'الأمن السيبراني', openTickets: 3, activeProjects: 2 },
-          { name: 'التحول الرقمي', openTickets: 4, activeProjects: 4 },
-          { name: 'الدعم الفني', openTickets: 8, activeProjects: 1 },
-        ],
+        departments: deptStats,
       };
     });
   }
@@ -237,8 +269,14 @@ class DashboardService {
           medium: Number(vulnsData.medium) || 0,
           low: Number(vulnsData.low) || 0,
         },
-        riskScore: 72,
-        avgResolutionTime: 48,
+        riskScore: Math.max(0, Math.min(100, 100 - (Number(incidentsData.critical) * 15) - (Number(vulnsData.critical) * 10) - (Number(incidentsData.active) * 5))),
+        avgResolutionTime: await (async () => {
+          const [rt] = await db.execute(sql`
+            SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600), 0)::numeric(10,1) as avg_hours
+            FROM security_incidents WHERE status IN ('resolved', 'closed')
+          `);
+          return Number((rt as any).rows?.[0]?.avg_hours || (rt as any)[0]?.avg_hours || 0);
+        })(),
       };
     });
   }
@@ -260,13 +298,19 @@ class DashboardService {
         ? Math.round((Number(reqData.completed) / reqData.total) * 100) 
         : 0;
 
+      const [assetsData] = await db.select({ count: count() }).from(dataAssets);
+      const [pendingReqs] = await db.execute(sql`
+        SELECT COUNT(*)::int as pending FROM data_subject_requests WHERE status = 'pending'
+      `);
+      const pendingCount = Number((pendingReqs as any).rows?.[0]?.pending || (pendingReqs as any)[0]?.pending || 0);
+
       return {
-        dataAssets: 156,
+        dataAssets: assetsData.count,
         complianceRate,
         domainsCount: domainsData.count,
         requirementsTotal: reqData.total,
         requirementsCompleted: Number(reqData.completed) || 0,
-        pendingRequests: 12,
+        pendingRequests: pendingCount,
       };
     });
   }
@@ -282,6 +326,22 @@ class DashboardService {
         })
         .from(committeeDecisions);
 
+      const [meetingsData] = await db.execute(sql`
+        SELECT
+          COUNT(CASE WHEN status = 'scheduled' OR scheduled_date > NOW() THEN 1 END)::int as upcoming,
+          COUNT(CASE WHEN status = 'completed' THEN 1 END)::int as completed
+        FROM committee_meetings
+      `);
+      const mtgRow = (meetingsData as any).rows?.[0] || (meetingsData as any)[0] || {};
+
+      const [votingData] = await db.execute(sql`
+        SELECT
+          COUNT(CASE WHEN status = 'active' THEN 1 END)::int as active,
+          COUNT(CASE WHEN status = 'closed' OR status = 'completed' THEN 1 END)::int as completed
+        FROM voting_sessions
+      `);
+      const voteRow = (votingData as any).rows?.[0] || (votingData as any)[0] || {};
+
       return {
         decisions: {
           total: decisionsData.total,
@@ -290,12 +350,12 @@ class DashboardService {
           rejected: Number(decisionsData.rejected) || 0,
         },
         meetings: {
-          upcoming: 3,
-          completed: 24,
+          upcoming: Number(mtgRow.upcoming) || 0,
+          completed: Number(mtgRow.completed) || 0,
         },
         votingSessions: {
-          active: 2,
-          completed: 45,
+          active: Number(voteRow.active) || 0,
+          completed: Number(voteRow.completed) || 0,
         },
       };
     });
