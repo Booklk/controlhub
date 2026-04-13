@@ -1,0 +1,44 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "pM5VYc9SKW0gIG9QO_9V9"
+uri = "file://controlhub-deploy.zip"
+type = "unspecified"
+title = "ControlHub Deploy — تقارير احترافية"
+
+[[outputs]]
+id = "S08td6bJWCcvb88kgJMNe"
+uri = "file://control-hub-update.zip"
+type = "unspecified"
+title = "Control Hub - تحديث المشروع"
+
+[[outputs]]
+id = "AaD4VNMuUcCeqYSXNINaH"
+uri = "file://control-hub-updates.zip"
+type = "unspecified"
+title = "Control Hub - جميع التحديثات (68 ملف)"
+
+[[outputs]]
+id = "tbEXTrSAlUz7IvUo63RP_"
+uri = "file://client/public/control-hub-complete.zip"
+type = "unspecified"
+title = "Control Hub - سورس كود كامل (11 MB)"
+
+[[outputs]]
+id = "uiFrDFxK-d5I3ISczHsOn"
+uri = "file://ControlHub-JCSA-2026.zip"
+type = "unspecified"
+title = "Control Hub - JCSA (نسخة كاملة مع node_modules)"
+
+[[outputs]]
+id = "Wf1OMVtjuRR6xf6lo_z2O"
+uri = "file://ControlHub-JCSA-Production.zip"
+type = "unspecified"
+title = "حزمة النشر - Control Hub JCSA (جاهزة للإنتاج)"
+
+[[outputs]]
+id = "VKjEPx5gK6chrvOCJBzIz"
+uri = "file://control-hub-latest.tar.gz"
+type = "unspecified"
+title = "Control Hub - آخر نسخة للنشر على السيرفر"
