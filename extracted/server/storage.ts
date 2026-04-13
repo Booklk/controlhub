@@ -656,7 +656,7 @@ export class DatabaseStorage implements IStorage {
   // Domains
   async getDomains(): Promise<Domain[]> {
     const database = getDb();
-    return await database.select().from(domains).orderBy(sql`${domains.sortOrder} ASC`);
+    return await database.select().from(domains).where(eq(domains.isActive, true)).orderBy(sql`${domains.sortOrder} ASC`);
   }
 
   async getDomainById(id: number): Promise<Domain | undefined> {

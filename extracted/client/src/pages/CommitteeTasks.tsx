@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { FileAttachment, FileAttachmentData } from "@/components/FileAttachment";
 import { useConfirmDialog, ConfirmDialog } from '@/components/ConfirmDialog';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,6 +58,8 @@ export default function CommitteeTasks() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [createAttachments, setCreateAttachments] = useState<FileAttachmentData[]>([]);
+  const [editAttachments, setEditAttachments] = useState<FileAttachmentData[]>([]);
 
   const createForm = useForm<TaskCreationFormData>({
     resolver: zodResolver(taskCreationSchema),
@@ -110,6 +113,7 @@ export default function CommitteeTasks() {
         assignedTo: data.assignedTo,
         priority: data.priority,
         dueDate: data.dueDate || null,
+        attachments: createAttachments,
       });
       return res.json();
     },
@@ -117,6 +121,7 @@ export default function CommitteeTasks() {
       toast({ title: 'تم إنشاء المهمة بنجاح', description: 'تمت إضافة المهمة الجديدة إلى القائمة' });
       setIsAddDialogOpen(false);
       createForm.reset();
+      setCreateAttachments([]);
       queryClient.invalidateQueries({ queryKey: ['/api/committee-tasks'] });
       invalidateRelatedQueries('/api/committee-tasks');
     },
@@ -133,6 +138,7 @@ export default function CommitteeTasks() {
         assignedTo: data.updates.assignedTo,
         priority: data.updates.priority,
         dueDate: data.updates.dueDate || null,
+        attachments: editAttachments,
       });
       return res.json();
     },
@@ -141,6 +147,7 @@ export default function CommitteeTasks() {
       setIsEditDialogOpen(false);
       setEditingTask(null);
       editForm.reset();
+      setEditAttachments([]);
       queryClient.invalidateQueries({ queryKey: ['/api/committee-tasks'] });
       invalidateRelatedQueries('/api/committee-tasks');
     },
@@ -178,6 +185,7 @@ export default function CommitteeTasks() {
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
       decisionId: undefined,
     });
+    setEditAttachments(Array.isArray((task as any).attachments) ? (task as any).attachments : []);
     setIsEditDialogOpen(true);
   };
 
@@ -369,6 +377,7 @@ export default function CommitteeTasks() {
                   setIsAddDialogOpen(open);
                   if (!open) {
                     createForm.reset();
+                    setCreateAttachments([]);
                   }
                 }}
               >
@@ -477,6 +486,12 @@ export default function CommitteeTasks() {
                           )}
                         />
                       </div>
+                      <FileAttachment
+                        attachments={createAttachments}
+                        onAttachmentsChange={setCreateAttachments}
+                        label="المرفقات"
+                        maxFiles={5}
+                      />
                       <DialogFooter>
                         <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} data-testid="button-cancel-create-task">إلغاء</Button>
                         <LoadingButton
@@ -583,6 +598,7 @@ export default function CommitteeTasks() {
             setIsEditDialogOpen(open);
             if (!open) {
               editForm.reset();
+              setEditAttachments([]);
             }
           }}
         >
@@ -691,6 +707,12 @@ export default function CommitteeTasks() {
                     )}
                   />
                 </div>
+                <FileAttachment
+                  attachments={editAttachments}
+                  onAttachmentsChange={setEditAttachments}
+                  label="المرفقات"
+                  maxFiles={5}
+                />
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} data-testid="button-cancel-edit-task">إلغاء</Button>
                   <LoadingButton

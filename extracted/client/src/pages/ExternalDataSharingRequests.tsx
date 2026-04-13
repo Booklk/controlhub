@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { FileAttachment, FileAttachmentData } from "@/components/FileAttachment";
 import {
   Share2, Plus, Search, Eye, Pencil, Trash2,
   ArrowLeftRight, ArrowUpRight, ArrowDownLeft,
@@ -100,6 +101,9 @@ function FormDialog({
   onSave: (data: any) => void; isSaving: boolean;
 }) {
   const [form, setForm] = useState<any>(initial);
+  const [attachments, setAttachments] = useState<FileAttachmentData[]>(
+    Array.isArray((initial as any).attachments) ? (initial as any).attachments : []
+  );
   const set = (k: string, v: string) => setForm((p: any) => ({ ...p, [k]: v }));
 
   return (
@@ -283,10 +287,20 @@ function FormDialog({
               className="bg-[#1a3a6b]/40 border-slate-600 text-white min-h-[60px] resize-none"
               data-testid="textarea-notes" />
           </div>
+
+          <div className="md:col-span-2">
+            <FileAttachment
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
+              label="المرفقات"
+              maxFiles={5}
+              dark
+            />
+          </div>
         </div>
 
         <DialogFooter className="mt-4 gap-2 flex-row-reverse">
-          <Button onClick={() => onSave(form)} disabled={isSaving || !form.externalPartyName || !form.dataAssets || !form.purpose}
+          <Button onClick={() => onSave({ ...form, attachments })} disabled={isSaving || !form.externalPartyName || !form.dataAssets || !form.purpose}
             className="bg-[#d4af37] hover:bg-[#b8963e] text-[#0a1628] font-bold"
             data-testid="button-save-form">
             {isSaving ? "جاري الحفظ..." : (initial as any).id ? "حفظ التعديلات" : "تسجيل الطلب"}

@@ -178,12 +178,24 @@ export function registerCommitteeRoutes(app: Express) {
     try {
       const year = new Date().getFullYear();
       const prefix = `DEC-${year}-`;
-      const [maxResult] = await db.execute(sql`
-        SELECT COALESCE(MAX(CAST(SPLIT_PART(decision_number, '-', 3) AS INTEGER)), 0) AS max_num
-        FROM committee_decisions
-        WHERE decision_number LIKE ${prefix + '%'}
-      `);
-      const nextNum = ((maxResult as any)?.max_num || 0) + 1;
+      let nextNum = 1;
+      try {
+        const maxResult = await db.execute(sql`
+          SELECT COALESCE(MAX(
+            CASE WHEN SPLIT_PART(decision_number, '-', 3) ~ '^\d+$'
+                 THEN CAST(SPLIT_PART(decision_number, '-', 3) AS INTEGER)
+                 ELSE 0 END
+          ), 0) AS max_num
+          FROM committee_decisions
+          WHERE decision_number LIKE ${prefix + '%'}
+        `);
+        const row = (maxResult as any).rows?.[0] || (maxResult as any)[0];
+        nextNum = (Number(row?.max_num) || 0) + 1;
+      } catch (seqErr) {
+        logger.warn('[Committee] Decision number sequence query failed, using fallback', { error: (seqErr as Error).message });
+        const allDecs = await storage.getCommitteeDecisions();
+        nextNum = allDecs.length + 1;
+      }
       const { title, description, decisionType, type, priority, meetingId, votingDeadline, implementationDeadline, effectiveDate, assignedTo, attachments } = req.body;
       if (!title) {
         return res.status(400).json({ error: 'عنوان القرار مطلوب' });
@@ -199,7 +211,7 @@ export function registerCommitteeRoutes(app: Express) {
         votesFor: 0,
         votesAgainst: 0,
         votesAbstain: 0,
-        meetingId: meetingId ? parseInt(meetingId) : null,
+        meetingId: meetingId && !isNaN(parseInt(meetingId)) ? parseInt(meetingId) : null,
         votingDeadline: votingDeadline ? new Date(votingDeadline) : null,
         implementationDeadline: deadlineValue ? new Date(deadlineValue) : null,
         implementationStatus: null,
@@ -785,12 +797,24 @@ export function registerCommitteeRoutes(app: Express) {
     try {
       const mtgYear = new Date().getFullYear();
       const mtgPrefix = `MTG-${mtgYear}-`;
-      const [maxMtgResult] = await db.execute(sql`
-        SELECT COALESCE(MAX(CAST(SPLIT_PART(meeting_number, '-', 3) AS INTEGER)), 0) AS max_num
-        FROM committee_meetings
-        WHERE meeting_number LIKE ${mtgPrefix + '%'}
-      `);
-      const nextMtgNum = ((maxMtgResult as any)?.max_num || 0) + 1;
+      let nextMtgNum = 1;
+      try {
+        const maxMtgResult = await db.execute(sql`
+          SELECT COALESCE(MAX(
+            CASE WHEN SPLIT_PART(meeting_number, '-', 3) ~ '^\d+$'
+                 THEN CAST(SPLIT_PART(meeting_number, '-', 3) AS INTEGER)
+                 ELSE 0 END
+          ), 0) AS max_num
+          FROM committee_meetings
+          WHERE meeting_number LIKE ${mtgPrefix + '%'}
+        `);
+        const mtgRow = (maxMtgResult as any).rows?.[0] || (maxMtgResult as any)[0];
+        nextMtgNum = (Number(mtgRow?.max_num) || 0) + 1;
+      } catch (seqErr) {
+        logger.warn('[Committee] Meeting number sequence query failed, using fallback', { error: (seqErr as Error).message });
+        const allMeetings = await storage.getCommitteeMeetings();
+        nextMtgNum = allMeetings.length + 1;
+      }
       const meetingData = {
         ...req.body,
         meetingNumber: req.body.meetingNumber || `MTG-${mtgYear}-${String(nextMtgNum).padStart(4, '0')}`,

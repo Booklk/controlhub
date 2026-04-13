@@ -7299,13 +7299,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const imapHost = process.env.IMAP_HOST || 'outlook.office365.com';
       const smtpUser = process.env.SMTP_USER;
       const smtpPass = process.env.SMTP_PASS;
-      if (!smtpUser || !smtpPass) return res.status(400).json({ error: 'لم يتم تكوين بيانات الاعتماد للبريد الإلكتروني' });
+      if (!smtpUser || !smtpPass) return res.status(400).json({
+        success: false,
+        error: 'لم يتم تكوين بيانات الاعتماد للبريد الإلكتروني',
+        errorCode: 'CREDENTIALS_MISSING',
+        imported: [], skipped: 0, failed: 0, total: 0,
+        message: 'يرجى ضبط SMTP_USER و SMTP_PASS في متغيرات البيئة'
+      });
 
       const { departmentId, subjectFilter = 'تذكرة', maxEmails = 50 } = req.body || {};
       const client = new ImapFlow({ host: imapHost, port: 993, secure: true, auth: { user: smtpUser, pass: smtpPass }, logger: false, tls: { rejectUnauthorized: false } });
 
       const imported: any[] = [];
       let skippedCount = 0;
+      let failedCount = 0;
+      let scannedCount = 0;
       await client.connect();
       const lock = await client.getMailboxLock('INBOX');
       try {
@@ -7313,6 +7321,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         let processed = 0;
         for await (const msg of messages) {
           if (processed >= maxEmails) break;
+          scannedCount++;
           try {
             const parsed: any = await simpleParser(msg.source as any);
             const subject = parsed.subject || '';
@@ -7341,19 +7350,66 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               sourceEmail: fromEmail,
               sourceEmailId: messageId,
             }).returning();
-            imported.push({ id: created.id, ticketNumber: ticketNum, title: subject });
+            imported.push({ id: created.id, ticketNumber: ticketNum, title: subject, from: fromEmail, priority });
             processed++;
-          } catch (msgErr) { logger.error('Error processing email for ticket:', { error: msgErr }); }
+          } catch (msgErr) {
+            failedCount++;
+            logger.error('Error processing email for ticket:', { error: msgErr });
+          }
         }
       } finally { lock.release(); }
       await client.logout();
-      res.json({ success: true, imported, skipped: skippedCount, total: imported.length + skippedCount });
+
+      const successMsg = imported.length > 0
+        ? `تم استيراد ${imported.length} تذكرة بنجاح من أصل ${scannedCount} رسالة`
+        : 'لم يتم العثور على رسائل جديدة تطابق الفلتر المحدد';
+
+      res.json({
+        success: true,
+        imported,
+        skipped: skippedCount,
+        failed: failedCount,
+        total: imported.length + skippedCount,
+        scanned: scannedCount,
+        message: successMsg
+      });
     } catch (error: any) {
       logger.error('Error importing tickets from Outlook:', { error });
       const msg = error?.message || '';
-      if (msg.includes('AUTHENTICATIONFAILED') || msg.includes('Invalid credentials')) return res.status(401).json({ error: 'فشل تسجيل الدخول إلى Outlook — تحقق من بيانات الاعتماد' });
-      if (msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) return res.status(503).json({ error: 'تعذّر الاتصال بـ Outlook' });
-      res.status(500).json({ error: `خطأ في استيراد التذاكر: ${msg}` });
+      if (msg.includes('AUTHENTICATIONFAILED') || msg.includes('Invalid credentials')) {
+        return res.status(401).json({
+          success: false,
+          error: 'فشل تسجيل الدخول إلى Outlook — تحقق من بيانات الاعتماد وتأكد من تفعيل IMAP',
+          errorCode: 'AUTH_FAILED',
+          imported: [], skipped: 0, failed: 0, total: 0,
+          message: 'تأكد من صحة اسم المستخدم وكلمة المرور وأن بروتوكول IMAP مفعّل في إعدادات البريد'
+        });
+      }
+      if (msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('connect')) {
+        return res.status(503).json({
+          success: false,
+          error: 'تعذّر الاتصال بخادم Outlook — تحقق من إعدادات الشبكة والخادم',
+          errorCode: 'CONNECTION_FAILED',
+          imported: [], skipped: 0, failed: 0, total: 0,
+          message: 'تأكد من إمكانية الوصول إلى خادم البريد وأن المنفذ 993 غير محظور'
+        });
+      }
+      if (msg.includes('ETIMEDOUT') || msg.includes('timeout')) {
+        return res.status(504).json({
+          success: false,
+          error: 'انتهت مهلة الاتصال بخادم Outlook',
+          errorCode: 'TIMEOUT',
+          imported: [], skipped: 0, failed: 0, total: 0,
+          message: 'الخادم لا يستجيب — حاول مرة أخرى لاحقاً أو تحقق من اتصال الشبكة'
+        });
+      }
+      res.status(500).json({
+        success: false,
+        error: `خطأ في استيراد التذاكر: ${msg}`,
+        errorCode: 'UNKNOWN',
+        imported: [], skipped: 0, failed: 0, total: 0,
+        message: 'حدث خطأ غير متوقع أثناء الاستيراد — حاول مرة أخرى'
+      });
     }
   });
 
@@ -7364,13 +7420,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const imapHost = process.env.IMAP_HOST || 'outlook.office365.com';
       const smtpUser = process.env.SMTP_USER;
       const smtpPass = process.env.SMTP_PASS;
-      if (!smtpUser || !smtpPass) return res.status(400).json({ error: 'لم يتم تكوين بيانات الاعتماد للبريد الإلكتروني' });
+      if (!smtpUser || !smtpPass) return res.status(400).json({
+        success: false,
+        error: 'لم يتم تكوين بيانات الاعتماد للبريد الإلكتروني',
+        errorCode: 'CREDENTIALS_MISSING',
+        imported: [], skipped: 0, failed: 0, total: 0,
+        message: 'يرجى ضبط SMTP_USER و SMTP_PASS في متغيرات البيئة'
+      });
 
       const { departmentId, subjectFilter = 'مهمة', maxEmails = 50 } = req.body || {};
       const client = new ImapFlow({ host: imapHost, port: 993, secure: true, auth: { user: smtpUser, pass: smtpPass }, logger: false, tls: { rejectUnauthorized: false } });
 
       const imported: any[] = [];
       let skippedCount = 0;
+      let failedCount = 0;
+      let scannedCount = 0;
       await client.connect();
       const lock = await client.getMailboxLock('INBOX');
       try {
@@ -7378,6 +7442,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         let processed = 0;
         for await (const msg of messages) {
           if (processed >= maxEmails) break;
+          scannedCount++;
           try {
             const parsed: any = await simpleParser(msg.source as any);
             const subject = parsed.subject || '';
@@ -7395,6 +7460,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             if (existingTask) { skippedCount++; continue; }
 
             const bodyText = parsed.text || parsed.html?.replace(/<[^>]+>/g, '') || '';
+            const fromEmail = parsed.from?.value?.[0]?.address || '';
             const priority = subject.includes('عاجل') || subject.includes('urgent') ? 'urgent'
               : subject.includes('مهم') || subject.includes('high') ? 'high' : 'medium';
 
@@ -7407,19 +7473,66 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               assignedBy: req.user.id,
               sourceType: 'outlook',
             }).returning();
-            imported.push({ id: created.id, title: subject });
+            imported.push({ id: created.id, title: subject, from: fromEmail, priority });
             processed++;
-          } catch (msgErr) { logger.error('Error processing email for task:', { error: msgErr }); }
+          } catch (msgErr) {
+            failedCount++;
+            logger.error('Error processing email for task:', { error: msgErr });
+          }
         }
       } finally { lock.release(); }
       await client.logout();
-      res.json({ success: true, imported, skipped: skippedCount, total: imported.length + skippedCount });
+
+      const successMsg = imported.length > 0
+        ? `تم استيراد ${imported.length} مهمة بنجاح من أصل ${scannedCount} رسالة`
+        : 'لم يتم العثور على رسائل جديدة تطابق الفلتر المحدد';
+
+      res.json({
+        success: true,
+        imported,
+        skipped: skippedCount,
+        failed: failedCount,
+        total: imported.length + skippedCount,
+        scanned: scannedCount,
+        message: successMsg
+      });
     } catch (error: any) {
       logger.error('Error importing tasks from Outlook:', { error });
       const msg = error?.message || '';
-      if (msg.includes('AUTHENTICATIONFAILED') || msg.includes('Invalid credentials')) return res.status(401).json({ error: 'فشل تسجيل الدخول إلى Outlook' });
-      if (msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) return res.status(503).json({ error: 'تعذّر الاتصال بـ Outlook' });
-      res.status(500).json({ error: `خطأ في استيراد المهام: ${msg}` });
+      if (msg.includes('AUTHENTICATIONFAILED') || msg.includes('Invalid credentials')) {
+        return res.status(401).json({
+          success: false,
+          error: 'فشل تسجيل الدخول إلى Outlook — تحقق من بيانات الاعتماد وتأكد من تفعيل IMAP',
+          errorCode: 'AUTH_FAILED',
+          imported: [], skipped: 0, failed: 0, total: 0,
+          message: 'تأكد من صحة اسم المستخدم وكلمة المرور وأن بروتوكول IMAP مفعّل في إعدادات البريد'
+        });
+      }
+      if (msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('connect')) {
+        return res.status(503).json({
+          success: false,
+          error: 'تعذّر الاتصال بخادم Outlook — تحقق من إعدادات الشبكة والخادم',
+          errorCode: 'CONNECTION_FAILED',
+          imported: [], skipped: 0, failed: 0, total: 0,
+          message: 'تأكد من إمكانية الوصول إلى خادم البريد وأن المنفذ 993 غير محظور'
+        });
+      }
+      if (msg.includes('ETIMEDOUT') || msg.includes('timeout')) {
+        return res.status(504).json({
+          success: false,
+          error: 'انتهت مهلة الاتصال بخادم Outlook',
+          errorCode: 'TIMEOUT',
+          imported: [], skipped: 0, failed: 0, total: 0,
+          message: 'الخادم لا يستجيب — حاول مرة أخرى لاحقاً أو تحقق من اتصال الشبكة'
+        });
+      }
+      res.status(500).json({
+        success: false,
+        error: `خطأ في استيراد المهام: ${msg}`,
+        errorCode: 'UNKNOWN',
+        imported: [], skipped: 0, failed: 0, total: 0,
+        message: 'حدث خطأ غير متوقع أثناء الاستيراد — حاول مرة أخرى'
+      });
     }
   });
 

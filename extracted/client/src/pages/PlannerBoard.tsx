@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn, invalidateRelatedQueries } from "@/lib/queryClient";
+import { FileAttachment, FileAttachmentData } from "@/components/FileAttachment";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -261,6 +262,7 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
     title: '', description: '', priority: 'medium', assignedTo: '', dueDate: '', startDate: '', labels: [] as string[],
     checklist: [] as { text: string; checked: boolean }[],
   });
+  const [newTaskAttachments, setNewTaskAttachments] = useState<FileAttachmentData[]>([]);
   const [newBucket, setNewBucket] = useState({ title: '', color: '#6366f1' });
   const [newCheckItem, setNewCheckItem] = useState('');
 
@@ -649,6 +651,7 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
       invalidatePlanner();
       setIsCreateTaskOpen(false);
       setNewTask({ title: '', description: '', priority: 'medium', assignedTo: '', dueDate: '', startDate: '', labels: [], checklist: [] });
+      setNewTaskAttachments([]);
       setRecurrenceEnabled(false);
       setRecurrenceType('daily');
       setRecurrenceInterval(1);
@@ -3072,6 +3075,12 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
                 )}
               </div>
             </div>
+            <FileAttachment
+              attachments={newTaskAttachments}
+              onAttachmentsChange={setNewTaskAttachments}
+              label="المرفقات"
+              maxFiles={5}
+            />
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setIsCreateTaskOpen(false)}>إلغاء</Button>
               <LoadingButton
@@ -3082,6 +3091,7 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
                   assignedTo: newTask.assignedTo && newTask.assignedTo !== 'none' ? parseInt(newTask.assignedTo) : null,
                   startDate: newTask.startDate || null, dueDate: newTask.dueDate || null,
                   labels: newTask.labels, checklist: newTask.checklist,
+                  attachments: newTaskAttachments,
                   recurrence: recurrenceEnabled ? { type: recurrenceType, interval: recurrenceInterval, daysOfWeek: recurrenceType === 'weekly' ? recurrenceDays : undefined } : null,
                 })}
                 disabled={!newTask.title.trim() || !targetBucketId}
