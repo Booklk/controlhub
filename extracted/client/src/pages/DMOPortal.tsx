@@ -915,6 +915,9 @@ export default function DMOPortal() {
   const deleteRuleMutation = useMutation({
     mutationFn: async (id: number) => { await apiRequest('DELETE', `/api/data-quality/${id}`); },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/data-quality'] }); toast({ title: 'تم حذف القاعدة' }); },
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    },
   });
 
   const createFlowMappingMutation = useMutation({

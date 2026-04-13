@@ -803,9 +803,10 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
     mutationFn: ({ id, ...data }: { id: number; targetDepartmentId: string; notes: string }) =>
       apiRequest('POST', `/api/planner/tasks/${id}/send-to-tasks`, data),
     onSuccess: () => {
+      const selectedDeptId = sendToTasksData.targetDepartmentId;
       setIsSendToTasksOpen(false);
       setSendToTasksData({ targetDepartmentId: '', notes: '' });
-      const deptName = IT_DEPARTMENTS_LIST.find(d => String(d.id) === sendToTasksData.targetDepartmentId)?.nameAr || 'الإدارة المستهدفة';
+      const deptName = IT_DEPARTMENTS_LIST.find(d => String(d.id) === selectedDeptId)?.nameAr || 'الإدارة المستهدفة';
       toast({
         title: '✅ تم نقل المهمة',
         description: `المهمة الآن في صفحة مهام ${deptName} وجاهزة للإحالة`

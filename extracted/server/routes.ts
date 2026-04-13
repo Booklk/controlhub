@@ -2002,10 +2002,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get("/api/it-assets/department/:departmentId", authenticateToken, async (req, res) => {
+  app.get("/api/it-assets/department/:departmentId", authenticateToken, async (req: any, res) => {
     try {
       const departmentId = parseId(req.params.departmentId, res);
       if (!departmentId) return;
+
+      // Department isolation check
+      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user.role);
+      if (!isAdmin && userDeptId && departmentId !== userDeptId) {
+        return res.status(403).json({ error: 'ليس لديك صلاحية الوصول لبيانات هذه الإدارة' });
+      }
+
       const assets = await storage.getITAssetsByDepartment(departmentId);
       res.json(assets);
     } catch (error) {
@@ -6620,9 +6628,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!current) {
         return res.status(404).json({ error: 'الإحالة غير موجودة' });
       }
-      
+
       const userRole = req.user?.role || '';
       const isDirectorOrAdmin = ['it_director', 'system_admin', 'admin'].includes(userRole);
+
+      // Department ownership check
+      if (!isDirectorOrAdmin) {
+        const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+        if (current.fromDepartmentId !== userDeptId && current.toDepartmentId !== userDeptId) {
+          return res.status(403).json({ error: 'ليس لديك صلاحية تعديل هذه الإحالة' });
+        }
+      }
+
       if (!isDirectorOrAdmin && !isValidTransition('referral', current.status, status)) {
         const allowed = getAllowedTransitions('referral', current.status);
         return res.status(400).json({ 
@@ -6723,7 +6740,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const { id } = req.params;
       const { title, description, priority, toDepartmentId, reason, dueDate, assignedToId, attachments } = req.body;
-      
+
+      // Department ownership check
+      const [current] = await db.select().from(itReferrals).where(eq(itReferrals.id, parseInt(id)));
+      if (!current) {
+        return res.status(404).json({ error: 'الإحالة غير موجودة' });
+      }
+      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user.role);
+      if (!isAdmin && current.fromDepartmentId !== userDeptId && current.toDepartmentId !== userDeptId) {
+        return res.status(403).json({ error: 'ليس لديك صلاحية تعديل هذه الإحالة' });
+      }
+
       await db.update(itReferrals)
         .set({
           title, description, priority, toDepartmentId, reason, assignedToId, attachments,
@@ -6751,7 +6779,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/it-referrals/:id", authenticateToken, async (req: any, res) => {
     try {
       const { id } = req.params;
-      
+
+      // Department ownership check
+      const [current] = await db.select().from(itReferrals).where(eq(itReferrals.id, parseInt(id)));
+      if (!current) {
+        return res.status(404).json({ error: 'الإحالة غير موجودة' });
+      }
+      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user.role);
+      if (!isAdmin && current.fromDepartmentId !== userDeptId && current.toDepartmentId !== userDeptId) {
+        return res.status(403).json({ error: 'ليس لديك صلاحية حذف هذه الإحالة' });
+      }
+
       // Delete history first
       await db.delete(itReferralHistory).where(eq(itReferralHistory.referralId, parseInt(id)));
       // Delete referral
@@ -11208,6 +11247,16 @@ function registerMissingWorkflowRoutes(app: Express) {
 
   app.get("/api/users-list", authenticateToken, async (req: any, res: any) => {
     try {
+      const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user.role);
+      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+
+      const conditions: any[] = [eq(users.isActive, true), isNull(users.deletedAt)];
+
+      // For non-admins, only return users from the same department
+      if (!isAdmin && userDeptId) {
+        conditions.push(eq(users.itDepartmentId, userDeptId));
+      }
+
       const allUsers = await db.select({
         id: users.id,
         name: users.name,
@@ -11216,7 +11265,7 @@ function registerMissingWorkflowRoutes(app: Express) {
         role: users.role,
         portal: users.portal,
         itDepartmentId: users.itDepartmentId,
-      }).from(users).where(and(eq(users.isActive, true), isNull(users.deletedAt)));
+      }).from(users).where(and(...conditions));
       res.json(allUsers);
     } catch (error) {
       logger.error('Error fetching users list:', { error });

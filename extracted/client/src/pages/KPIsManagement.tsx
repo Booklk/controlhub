@@ -268,7 +268,7 @@ export default function KPIsManagement({ portalName = "it_director", navGroups =
       title: 'تقرير مؤشرات الأداء',
       subtitle: 'JCSA - Control Hub',
       columns: [{"header":"المؤشر","key":"name","width":40},{"header":"المستهدف","key":"target","width":20},{"header":"الفعلي","key":"actual","width":20},{"header":"الوحدة","key":"unit","width":20},{"header":"الحالة","key":"status","width":20}],
-      data: (kpis || []).map((item: any) => ({ name: item.name || '', target: item.target?.toString() || '', actual: item.actual?.toString() || '', unit: item.unit || '', status: formatStatus(item.status || '') })),
+      data: (kpis || []).map((item: any) => ({ name: item.metricName || '', target: item.targetValue?.toString() || '', actual: item.actualValue?.toString() || '', unit: item.unit || '', status: formatStatus(item.status || '') })),
       filename: 'kpis-report',
       orientation: 'landscape',
     });
@@ -278,7 +278,7 @@ export default function KPIsManagement({ portalName = "it_director", navGroups =
     exportToExcel({
       title: 'تقرير مؤشرات الأداء',
       columns: [{"header":"المؤشر","key":"name","width":40},{"header":"المستهدف","key":"target","width":20},{"header":"الفعلي","key":"actual","width":20},{"header":"الوحدة","key":"unit","width":20},{"header":"الحالة","key":"status","width":20}],
-      data: (kpis || []).map((item: any) => ({ name: item.name || '', target: item.target?.toString() || '', actual: item.actual?.toString() || '', unit: item.unit || '', status: formatStatus(item.status || '') })),
+      data: (kpis || []).map((item: any) => ({ name: item.metricName || '', target: item.targetValue?.toString() || '', actual: item.actualValue?.toString() || '', unit: item.unit || '', status: formatStatus(item.status || '') })),
       filename: 'kpis-report',
     });
   };
