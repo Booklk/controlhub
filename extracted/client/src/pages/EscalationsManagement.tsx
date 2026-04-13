@@ -132,8 +132,8 @@ export default function EscalationsManagement() {
       setResolution('');
       toast({ title: 'تم اتخاذ الإجراء بنجاح', description: 'تم تحديث حالة التصعيد' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ', description: error.message, variant: 'destructive' });
     },
   });
 

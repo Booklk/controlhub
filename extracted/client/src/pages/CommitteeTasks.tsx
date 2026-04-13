@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import { committeeNavGroups } from "@/lib/navigation";
 import { taskCreationSchema, type TaskCreationFormData } from "@/lib/schemas";
 import { 
@@ -104,34 +104,37 @@ export default function CommitteeTasks() {
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskCreationFormData) => {
-      return apiRequest('POST', '/api/committee-tasks', {
+      const res = await apiRequest('POST', '/api/committee-tasks', {
         title: data.title,
         description: data.description,
         assignedTo: data.assignedTo,
         priority: data.priority,
         dueDate: data.dueDate || null,
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم إنشاء المهمة بنجاح', description: 'تمت إضافة المهمة الجديدة إلى القائمة' });
       setIsAddDialogOpen(false);
       createForm.reset();
       queryClient.invalidateQueries({ queryKey: ['/api/committee-tasks'] });
+      invalidateRelatedQueries('/api/committee-tasks');
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء إنشاء المهمة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: { id: number; updates: TaskCreationFormData }) => {
-      return apiRequest('PUT', `/api/committee-tasks/${data.id}`, {
+      const res = await apiRequest('PUT', `/api/committee-tasks/${data.id}`, {
         title: data.updates.title,
         description: data.updates.description,
         assignedTo: data.updates.assignedTo,
         priority: data.updates.priority,
         dueDate: data.updates.dueDate || null,
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم تحديث المهمة بنجاح', description: 'تم حفظ التغييرات' });
@@ -139,22 +142,25 @@ export default function CommitteeTasks() {
       setEditingTask(null);
       editForm.reset();
       queryClient.invalidateQueries({ queryKey: ['/api/committee-tasks'] });
+      invalidateRelatedQueries('/api/committee-tasks');
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء تحديث المهمة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/committee-tasks/${id}`);
+      const res = await apiRequest('DELETE', `/api/committee-tasks/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم حذف المهمة بنجاح', description: 'تمت إزالة المهمة من القائمة' });
       queryClient.invalidateQueries({ queryKey: ['/api/committee-tasks'] });
+      invalidateRelatedQueries('/api/committee-tasks');
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء حذف المهمة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -187,14 +193,16 @@ export default function CommitteeTasks() {
 
   const statusChangeMutation = useMutation({
     mutationFn: async (data: { id: number; status: string }) => {
-      return apiRequest('PATCH', `/api/committee-tasks/${data.id}/status`, { status: data.status });
+      const res = await apiRequest('PATCH', `/api/committee-tasks/${data.id}/status`, { status: data.status });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم تحديث الحالة بنجاح' });
       queryClient.invalidateQueries({ queryKey: ['/api/committee-tasks'] });
+      invalidateRelatedQueries('/api/committee-tasks');
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء تحديث الحالة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 

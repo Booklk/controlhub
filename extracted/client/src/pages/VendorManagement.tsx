@@ -153,60 +153,63 @@ export default function VendorManagement() {
 
   const createVendorMutation = useMutation({
     mutationFn: async (data: VendorCreationFormData) => {
-      return apiRequest("POST", "/api/vendors", data);
+      const res = await apiRequest("POST", "/api/vendors", data);
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
       invalidateRelatedQueries('/api/vendors');
       setIsAddDialogOpen(false);
       form.reset();
       toast({ title: "تم إضافة المورد بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في إضافة المورد", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في إضافة المورد", description: error.message, variant: "destructive" });
     }
   });
 
   const createSLAMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/sla-agreements", data);
+      const res = await apiRequest("POST", "/api/sla-agreements", data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sla-agreements"] });
       setIsSLADialogOpen(false);
       toast({ title: "تم إضافة اتفاقية SLA بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في إضافة الاتفاقية", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في إضافة الاتفاقية", description: error.message, variant: "destructive" });
     }
   });
 
   const updateVendorMutation = useMutation({
     mutationFn: async (data: VendorCreationFormData) => {
-      return apiRequest("PUT", `/api/vendors/${editingItem?.id}`, data);
+      const res = await apiRequest("PUT", `/api/vendors/${editingItem?.id}`, data);
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
       invalidateRelatedQueries('/api/vendors');
       setIsAddDialogOpen(false);
       setEditingItem(null);
       form.reset();
       toast({ title: "تم تحديث المورد بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في تحديث المورد", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في تحديث المورد", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteVendorMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/vendors/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/vendors/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
       invalidateRelatedQueries('/api/vendors');
       toast({ title: "تم حذف المورد بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل حذف المورد", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في حذف المورد", description: error.message, variant: "destructive" });
     },
   });
 

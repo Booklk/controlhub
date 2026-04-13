@@ -103,14 +103,16 @@ export default function SecurityIncidentsPage() {
       setSuccessIncident({ id: data.id, title: data.title || data.titleAr || 'حادثة أمنية' });
       resetForm();
     },
-    onError: () => {
-      toast({ title: 'خطأ في إنشاء البلاغ', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في إنشاء البلاغ', description: error.message, variant: 'destructive' });
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest("PUT", `/api/security-incidents/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/security-incidents/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/security-incidents"] });
       invalidateRelatedQueries('/api/security-incidents');
@@ -118,20 +120,23 @@ export default function SecurityIncidentsPage() {
       setEditing(null);
       toast({ title: "تم تحديث الحادثة" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في تحديث الحادث', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في تحديث الحادث', description: error.message, variant: 'destructive' });
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/security-incidents/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/security-incidents/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/security-incidents"] });
       invalidateRelatedQueries('/api/security-incidents');
       toast({ title: "تم حذف الحادثة" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في حذف الحادث', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في حذف الحادث', description: error.message, variant: 'destructive' });
     }
   });
 

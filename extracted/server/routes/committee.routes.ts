@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import {
-  storage, db, parseId, invalidateDashboardCaches,
+  storage, db, parseId, handleDbError, invalidateDashboardCaches,
   authenticateToken, sanitizeObject, stripProtectedFields,
   requireCommitteeRole, COMMITTEE_WRITE_ROLES, COMMITTEE_READ_ROLES, COMMITTEE_ADMIN_ROLES,
   requireDelete, RESOURCES,
@@ -73,7 +73,7 @@ export function registerCommitteeRoutes(app: Express) {
       const members = await storage.getCommitteeMembers();
       res.json(members);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'العملية');
     }
   });
 
@@ -108,7 +108,7 @@ export function registerCommitteeRoutes(app: Express) {
         .orderBy(desc(committeeDecisions.createdAt));
       res.json(decisions);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'العملية');
     }
   });
 
@@ -127,7 +127,7 @@ export function registerCommitteeRoutes(app: Express) {
       }
       res.json(meetings);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'العملية');
     }
   });
 
@@ -136,7 +136,7 @@ export function registerCommitteeRoutes(app: Express) {
       const meetings = await storage.getUpcomingMeetings();
       res.json(meetings);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'العملية');
     }
   });
 
@@ -170,20 +170,20 @@ export function registerCommitteeRoutes(app: Express) {
       if (error?.code === '23505') {
         return res.status(400).json({ error: 'هذا البريد الإلكتروني مسجّل مسبقاً في اللجنة' });
       }
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إضافة عضو اللجنة');
     }
   });
 
   app.post("/api/committee/decisions", authenticateToken, requireCommitteeRole(COMMITTEE_WRITE_ROLES), async (req: any, res) => {
     try {
       const year = new Date().getFullYear();
-      const allDecisions = await storage.getCommitteeDecisions();
-      const yearDecisions = allDecisions.filter(d => d.decisionNumber && d.decisionNumber.startsWith(`DEC-${year}-`));
-      const maxNum = yearDecisions.reduce((max, d) => {
-        const num = parseInt(d.decisionNumber.split('-')[2] || '0');
-        return Math.max(max, num);
-      }, 0);
-      const nextNum = maxNum + 1;
+      const prefix = `DEC-${year}-`;
+      const [maxResult] = await db.execute(sql`
+        SELECT COALESCE(MAX(CAST(SPLIT_PART(decision_number, '-', 3) AS INTEGER)), 0) AS max_num
+        FROM committee_decisions
+        WHERE decision_number LIKE ${prefix + '%'}
+      `);
+      const nextNum = ((maxResult as any)?.max_num || 0) + 1;
       const { title, description, decisionType, type, priority, meetingId, votingDeadline, implementationDeadline, effectiveDate, assignedTo, attachments } = req.body;
       if (!title) {
         return res.status(400).json({ error: 'عنوان القرار مطلوب' });
@@ -234,7 +234,7 @@ export function registerCommitteeRoutes(app: Express) {
       invalidateDashboardCaches();
       res.status(201).json(decision);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'العملية');
     }
   });
 
@@ -660,7 +660,7 @@ export function registerCommitteeRoutes(app: Express) {
       invalidateDashboardCaches();
       res.json(decision);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'العملية');
     }
   });
 
@@ -784,16 +784,16 @@ export function registerCommitteeRoutes(app: Express) {
   app.post("/api/committee/meetings", authenticateToken, requireCommitteeRole(COMMITTEE_WRITE_ROLES), async (req, res) => {
     try {
       const mtgYear = new Date().getFullYear();
-      const allMeetings = await storage.getCommitteeMeetings();
-      const maxMtg = allMeetings.reduce((max, m) => {
-        if (!m.meetingNumber) return max;
-        const parts = m.meetingNumber.split('-');
-        const num = parseInt(parts[parts.length - 1] || '0');
-        return Math.max(max, num);
-      }, 0);
+      const mtgPrefix = `MTG-${mtgYear}-`;
+      const [maxMtgResult] = await db.execute(sql`
+        SELECT COALESCE(MAX(CAST(SPLIT_PART(meeting_number, '-', 3) AS INTEGER)), 0) AS max_num
+        FROM committee_meetings
+        WHERE meeting_number LIKE ${mtgPrefix + '%'}
+      `);
+      const nextMtgNum = ((maxMtgResult as any)?.max_num || 0) + 1;
       const meetingData = {
         ...req.body,
-        meetingNumber: req.body.meetingNumber || `MTG-${mtgYear}-${String(maxMtg + 1).padStart(4, '0')}`,
+        meetingNumber: req.body.meetingNumber || `MTG-${mtgYear}-${String(nextMtgNum).padStart(4, '0')}`,
         scheduledDate: new Date(req.body.scheduledDate || req.body.date),
         createdBy: (req as any).user.id,
       };
@@ -823,7 +823,7 @@ export function registerCommitteeRoutes(app: Express) {
       invalidateDashboardCaches();
       res.status(201).json(meeting);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'العملية');
     }
   });
 

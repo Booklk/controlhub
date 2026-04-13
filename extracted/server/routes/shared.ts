@@ -234,8 +234,30 @@ const PORTAL_TO_DEPT_ID: Record<string, number> = {
   dmo: 5,
 };
 
+/**
+ * Maps PostgreSQL/DB errors to user-friendly Arabic messages
+ */
+function handleDbError(error: any, res: any, context: string = 'العملية') {
+  const code = error?.code;
+  if (code === '23505') {
+    return res.status(409).json({ error: `${context}: يوجد سجل مكرر بنفس البيانات` });
+  }
+  if (code === '23503') {
+    return res.status(400).json({ error: `${context}: البيانات المرتبطة غير موجودة` });
+  }
+  if (code === '23502') {
+    const column = error?.column || '';
+    return res.status(400).json({ error: `${context}: حقل مطلوب غير مزوّد${column ? ` (${column})` : ''}` });
+  }
+  if (code === '22P02') {
+    return res.status(400).json({ error: `${context}: نوع البيانات غير صحيح` });
+  }
+  logger.error(`[DB] ${context} failed:`, { error: error?.message, code });
+  return res.status(500).json({ error: `حدث خطأ أثناء ${context}` });
+}
+
 export {
-  storage, db, upload, parseId, logger, cache, TTL, invalidateDashboardCaches,
+  storage, db, upload, parseId, handleDbError, logger, cache, TTL, invalidateDashboardCaches,
   authenticateToken, getJWTSecret, getRefreshSecret, JWT_ALGORITHM, JWT_ACCESS_SECRET,
   MAX_LOGIN_ATTEMPTS, checkLoginAttemptsByDB, recordFailedLoginDB, clearLoginAttemptsDB,
   blacklistToken, tokenBlacklist, emailQueue,

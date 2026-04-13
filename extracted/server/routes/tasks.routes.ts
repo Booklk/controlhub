@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import {
-  storage, db, parseId, logger, invalidateDashboardCaches,
+  storage, db, parseId, handleDbError, logger, invalidateDashboardCaches,
   authenticateToken, 
   sql, eq, and, or, isNull, isNotNull, not, inArray, desc, gte,
   tasks, users, escalations, plannerTasks, plannerBuckets,
@@ -205,7 +205,7 @@ export function registerTaskRoutes(app: Express) {
 
       res.json(task);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تصعيد المهمة');
     }
   });
 
@@ -329,7 +329,7 @@ export function registerTaskRoutes(app: Express) {
       res.json({ ...task, emailSent });
     } catch (error: any) {
       logger.error('Error creating task:', { error: error?.message || error, stack: error?.stack });
-      res.status(500).json({ error: 'حدث خطأ في إنشاء المهمة' });
+      handleDbError(error, res, 'إنشاء المهمة');
     }
   });
 
@@ -399,7 +399,7 @@ export function registerTaskRoutes(app: Express) {
       invalidateDashboardCaches();
       res.json(task);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في تحديث المهمة' });
+      handleDbError(error, res, 'تحديث حالة المهمة');
     }
   });
 
@@ -478,7 +478,7 @@ export function registerTaskRoutes(app: Express) {
       res.json(task);
     } catch (error) {
       logger.error('Error updating task:', { error });
-      res.status(500).json({ error: 'حدث خطأ في تحديث المهمة' });
+      handleDbError(error, res, 'تحديث المهمة');
     }
   });
 

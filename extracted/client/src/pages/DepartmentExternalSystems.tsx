@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { queryClient, apiRequest } from '@/lib/queryClient';
+import { queryClient, apiRequest, invalidateRelatedQueries } from '@/lib/queryClient';
 import DashboardLayout from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/Quality';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -182,12 +182,13 @@ export default function DepartmentExternalSystems({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/external-systems'] });
+      invalidateRelatedQueries('/api/external-systems');
       toast({ title: 'تم إرسال طلب الربط للموافقة' });
       setShowAddDialog(false);
       resetForm();
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إرسال الطلب', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في إرسال الطلب', description: error.message, variant: 'destructive' });
     }
   });
 

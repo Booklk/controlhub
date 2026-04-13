@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/DashboardLayout";
 import { dmoNavGroups } from "@/lib/navigation";
@@ -117,36 +117,48 @@ export default function ConsentManagement() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/consent-records", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/consent-records", data);
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: "تم إنشاء سجل الموافقة بنجاح" });
       queryClient.invalidateQueries({ queryKey: ["/api/consent-records"] });
       queryClient.invalidateQueries({ queryKey: ["/api/consent-records/stats"] });
+      invalidateRelatedQueries('/api/consent-records');
       setIsCreateOpen(false);
       resetForm();
     },
-    onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const withdrawMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("PUT", `/api/consent-records/${id}/withdraw`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PUT", `/api/consent-records/${id}/withdraw`);
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: "تم سحب الموافقة بنجاح" });
       queryClient.invalidateQueries({ queryKey: ["/api/consent-records"] });
       queryClient.invalidateQueries({ queryKey: ["/api/consent-records/stats"] });
+      invalidateRelatedQueries('/api/consent-records');
       setIsDetailOpen(false);
     },
-    onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/consent-records/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/consent-records/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: "تم حذف السجل" });
       queryClient.invalidateQueries({ queryKey: ["/api/consent-records"] });
       queryClient.invalidateQueries({ queryKey: ["/api/consent-records/stats"] });
+      invalidateRelatedQueries('/api/consent-records');
     },
-    onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const resetForm = () => {

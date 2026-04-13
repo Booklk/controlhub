@@ -114,7 +114,7 @@ export default function CommitteeMembers() {
  // Create member mutation
  const createMemberMutation = useMutation({
  mutationFn: async (data: MemberCreationFormData) => {
- return apiRequest('POST', '/api/committee-members', {
+ const res = await apiRequest('POST', '/api/committee-members', {
  name: data.fullName,
  email: data.email,
  phone: data.phone,
@@ -122,6 +122,7 @@ export default function CommitteeMembers() {
  committeeRole: data.memberRole,
  position: data.memberRole === 'chairman' ? 'رئيس اللجنة' : data.memberRole === 'vice_chairman' ? 'نائب الرئيس' : data.memberRole === 'specialist_member' ? 'عضو متخصص (مقرر)' : 'عضو'
  });
+ return res.json();
  },
  onSuccess: () => {
  toast({ title: 'تم إضافة العضو بنجاح' });
@@ -130,14 +131,15 @@ export default function CommitteeMembers() {
  setIsAddMemberDialogOpen(false);
  form.reset();
  },
- onError: () => {
- toast({ title: 'خطأ', description: 'فشل في إضافة العضو', variant: 'destructive' });
+ onError: (error: Error) => {
+ toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
  }
  });
 
  const updateMemberMutation = useMutation({
  mutationFn: async ({ id, data }: { id: number; data: any }) => {
- return apiRequest('PUT', `/api/committee-members/${id}`, data);
+ const res = await apiRequest('PUT', `/api/committee-members/${id}`, data);
+ return res.json();
  },
  onSuccess: () => {
  toast({ title: 'تم تحديث العضو بنجاح' });
@@ -146,15 +148,16 @@ export default function CommitteeMembers() {
  setIsEditDialogOpen(false);
  setEditingMember(null);
  },
- onError: () => {
- toast({ title: 'خطأ', description: 'فشل في تحديث العضو', variant: 'destructive' });
+ onError: (error: Error) => {
+ toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
  }
  });
 
  // Delete member mutation
  const deleteMemberMutation = useMutation({
  mutationFn: async (id: number) => {
- return apiRequest('DELETE', `/api/committee-members/${id}`);
+ const res = await apiRequest('DELETE', `/api/committee-members/${id}`);
+ return res.json();
  },
  onSuccess: () => {
  toast({ title: 'تم حذف العضو بنجاح' });
@@ -162,8 +165,8 @@ export default function CommitteeMembers() {
  invalidateRelatedQueries('/api/committee-members');
  setIsDetailDialogOpen(false);
  },
- onError: () => {
- toast({ title: 'خطأ', description: 'فشل في حذف العضو', variant: 'destructive' });
+ onError: (error: Error) => {
+ toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
  }
  });
 

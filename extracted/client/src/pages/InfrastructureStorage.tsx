@@ -40,7 +40,7 @@ export default function InfrastructureStorage() {
 
   const createStorageMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('POST', '/api/infrastructure/storage', {
+      const res = await apiRequest('POST', '/api/infrastructure/storage', {
         name: data.name,
         storageType: data.storageType,
         totalCapacityTb: parseInt(data.totalCapacityTb) || 100,
@@ -49,6 +49,7 @@ export default function InfrastructureStorage() {
         raidLevel: 'RAID-5',
         location: 'الموقع الرئيسي'
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/storage'] });
@@ -57,34 +58,36 @@ export default function InfrastructureStorage() {
       setNewStorage({ name: "", storageType: "SAN", totalCapacityTb: "", status: "healthy" });
       toast({ title: "تم إضافة وحدة التخزين بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في إضافة وحدة التخزين", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteStorageMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/infrastructure/storage/${id}`);
+      const res = await apiRequest('DELETE', `/api/infrastructure/storage/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/storage'] });
       invalidateRelatedQueries('/api/infrastructure/storage');
       toast({ title: "تم حذف وحدة التخزين بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في حذف وحدة التخزين", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const updateStorageMutation = useMutation({
     mutationFn: async (data: any) => {
       const { id, ...updateData } = data;
-      return apiRequest('PUT', `/api/infrastructure/storage/${id}`, {
+      const res = await apiRequest('PUT', `/api/infrastructure/storage/${id}`, {
         name: updateData.name,
         storageType: updateData.storageType,
         totalCapacityTb: parseInt(updateData.totalCapacityTb) || 100,
         status: updateData.status || 'healthy',
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/storage'] });
@@ -94,8 +97,8 @@ export default function InfrastructureStorage() {
       setNewStorage({ name: "", storageType: "SAN", totalCapacityTb: "", status: "healthy" });
       toast({ title: "تم تحديث وحدة التخزين بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في تحديث وحدة التخزين", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 

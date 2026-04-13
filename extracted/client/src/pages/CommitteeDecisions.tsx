@@ -95,7 +95,8 @@ function DecisionCreationForm({
 
   const createMutation = useMutation({
     mutationFn: async (data: DecisionCreationFormData) => {
-      return apiRequest("POST", "/api/committee/decisions", { ...data, attachments });
+      const res = await apiRequest("POST", "/api/committee/decisions", { ...data, attachments });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "نجح", description: "تم إنشاء القرار بنجاح وسيتم إرساله للمراجعة" });
@@ -105,14 +106,15 @@ function DecisionCreationForm({
       setAttachments([]);
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل إنشاء القرار", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async (data: DecisionCreationFormData) => {
-      return apiRequest("PUT", `/api/committee/decisions/${editingItem?.id}`, { ...data, attachments });
+      const res = await apiRequest("PUT", `/api/committee/decisions/${editingItem?.id}`, { ...data, attachments });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "نجح", description: "تم تحديث القرار بنجاح" });
@@ -122,8 +124,8 @@ function DecisionCreationForm({
       onEditingItemChange?.(null);
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل تحديث القرار", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 
@@ -389,7 +391,8 @@ function AddAttachmentDialog({
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", `/api/committee/decisions/${decisionId}/attachments`, { attachments });
+      const res = await apiRequest("POST", `/api/committee/decisions/${decisionId}/attachments`, { attachments });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "تم إضافة المرفقات بنجاح", description: "سيتم إشعار أعضاء اللجنة" });
@@ -398,8 +401,8 @@ function AddAttachmentDialog({
       setAttachments([]);
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل إضافة المرفقات", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 
@@ -515,35 +518,38 @@ export default function CommitteeDecisions() {
 
   const submitMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('PATCH', `/api/committee/decisions/${id}/submit`, {});
+      const res = await apiRequest('PATCH', `/api/committee/decisions/${id}/submit`, {});
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم تقديم القرار للمراجعة', description: 'سيتم إشعار رئيس اللجنة' });
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       invalidateRelatedQueries('/api/committee/decisions');
     },
-    onError: (err: any) => {
-      toast({ title: 'خطأ', description: err?.message || 'فشل تقديم القرار', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const sendToVotingMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('PATCH', `/api/committee/decisions/${id}/send-to-voting`, {});
+      const res = await apiRequest('PATCH', `/api/committee/decisions/${id}/send-to-voting`, {});
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم إرسال القرار للتصويت', description: 'تم إشعار جميع الأعضاء' });
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       invalidateRelatedQueries('/api/committee/decisions');
     },
-    onError: (err: any) => {
-      toast({ title: 'خطأ', description: err?.message || 'فشل إرسال القرار للتصويت', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const voteMutation = useMutation({
     mutationFn: async ({ id, vote }: { id: number; vote: string }) => {
-      return apiRequest('POST', `/api/committee/decisions/${id}/vote`, { vote });
+      const res = await apiRequest('POST', `/api/committee/decisions/${id}/vote`, { vote });
+      return res.json();
     },
     onSuccess: (_, vars) => {
       const voteLabel = vars.vote === 'approve' ? 'بالموافقة' : vars.vote === 'reject' ? 'بالرفض' : 'بالامتناع';
@@ -551,29 +557,31 @@ export default function CommitteeDecisions() {
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       invalidateRelatedQueries('/api/committee/decisions');
     },
-    onError: (err: any) => {
-      const msg = err?.message || 'حدث خطأ في التصويت';
+    onError: (error: Error) => {
+      const msg = error.message || 'حدث خطأ في التصويت';
       toast({ title: 'خطأ', description: msg.includes('مسبقاً') ? 'لقد قمت بالتصويت مسبقاً على هذا القرار' : msg, variant: 'destructive' });
     },
   });
 
   const approveMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('PATCH', `/api/committee/decisions/${id}/chairman-approve`, {});
+      const res = await apiRequest('PATCH', `/api/committee/decisions/${id}/chairman-approve`, {});
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم اعتماد القرار', description: 'تم إشعار جميع الأعضاء بالاعتماد' });
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       invalidateRelatedQueries('/api/committee/decisions');
     },
-    onError: (err: any) => {
-      toast({ title: 'خطأ', description: err?.message || 'فشل اعتماد القرار', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const rejectMutation = useMutation({
     mutationFn: async ({ id, rejectionReason }: { id: number; rejectionReason: string }) => {
-      return apiRequest('PATCH', `/api/committee/decisions/${id}/chairman-reject`, { rejectionReason });
+      const res = await apiRequest('PATCH', `/api/committee/decisions/${id}/chairman-reject`, { rejectionReason });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم رفض القرار' });
@@ -581,20 +589,23 @@ export default function CommitteeDecisions() {
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       invalidateRelatedQueries('/api/committee/decisions');
     },
-    onError: (err: any) => {
-      toast({ title: 'خطأ', description: err?.message || 'فشل رفض القرار', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/committee/decisions/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/committee/decisions/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       invalidateRelatedQueries('/api/committee/decisions');
       toast({ title: "تم حذف القرار بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل حذف القرار", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 

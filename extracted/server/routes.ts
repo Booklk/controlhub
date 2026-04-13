@@ -32,7 +32,7 @@ import {
   hasPortalAccess 
 } from "@shared/constants";
 import { notifyTicketCreated, notifyTicketStatusChanged, notifyProjectCreated, notifyProjectStatusChanged, notifyTaskAssigned, notifySLABreachCreated, startNotificationScheduler } from "./notification-service";
-import { PORTAL_TO_DEPT_ID } from "./routes/shared";
+import { PORTAL_TO_DEPT_ID, handleDbError } from "./routes/shared";
 import { 
   requirePermission, 
   requireView, 
@@ -865,9 +865,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           await blob.save(req.file.buffer, { contentType: req.file.mimetype });
           fileKey = key;
           fileUrl = key;
-        } catch {
-          fileKey = `local_${Date.now()}_${req.file.originalname}`;
-          fileUrl = fileKey;
+        } catch (uploadError) {
+          logger.error('[Upload] Object storage failed:', { error: uploadError });
+          return res.status(500).json({ success: false, message: 'فشل في رفع الملف. يرجى المحاولة مرة أخرى' });
         }
       }
 
@@ -927,9 +927,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         await blob.save(req.file.buffer, { contentType: req.file.mimetype });
         fileKey = key;
         fileUrl = key;
-      } catch {
-        fileKey = `local_${Date.now()}_${req.file.originalname}`;
-        fileUrl = fileKey;
+      } catch (uploadError) {
+        logger.error('[Upload] Object storage failed:', { error: uploadError });
+        return res.status(500).json({ success: false, message: 'فشل في رفع الملف. يرجى المحاولة مرة أخرى' });
       }
 
       const [updated] = await db.update(evidences).set({
@@ -2706,18 +2706,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: 'صيغة الملف غير مدعومة. الصيغ المتاحة: PDF, Word, Excel, PowerPoint, PNG, JPEG' });
       }
       const fileName = `agreements/${id}/${Date.now()}-${req.file.originalname}`;
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (bucketId) {
-        const { Client } = await import('@replit/object-storage');
-        const client = new Client();
-        await client.uploadFromBytes(fileName, req.file.buffer);
-        const fileUrl = `/api/files/${fileName}`;
+      try {
+        const { objectStorageClient } = await import('./integrations/object_storage/objectStorage');
+        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || '';
+        const bucket = objectStorageClient.bucket(bucketId);
+        const blob = bucket.file(fileName);
+        await blob.save(req.file.buffer, { contentType: req.file.mimetype });
+        const fileUrl = fileName;
         await db.update(dataAgreements).set({ fileUrl, updatedAt: new Date() }).where(eq(dataAgreements.id, id));
         res.json({ success: true, fileUrl });
-      } else {
-        const fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        await db.update(dataAgreements).set({ fileUrl, updatedAt: new Date() }).where(eq(dataAgreements.id, id));
-        res.json({ success: true, fileUrl });
+      } catch (uploadError) {
+        logger.error('[Upload] Object storage failed:', { error: uploadError });
+        return res.status(500).json({ success: false, message: 'فشل في رفع الملف. يرجى المحاولة مرة أخرى' });
       }
     } catch (error) {
       logger.error('Error uploading agreement file:', { error });
@@ -4521,8 +4521,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const blob = bucket.file(key);
         await blob.save(req.file.buffer, { contentType: req.file.mimetype });
         fileUrl = key;
-      } catch {
-        fileUrl = `local_${Date.now()}_${req.file.originalname}`;
+      } catch (uploadError) {
+        logger.error('[Upload] Object storage failed:', { error: uploadError });
+        return res.status(500).json({ success: false, message: 'فشل في رفع الملف. يرجى المحاولة مرة أخرى' });
       }
 
       const [updated] = await db.update(documents).set({
@@ -7517,7 +7518,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json(initiative);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء المبادرة الرقمية');
     }
   });
 
@@ -7537,7 +7538,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!updated) return res.status(404).json({ error: 'المبادرة غير موجودة' });
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث المبادرة الرقمية');
     }
   });
 
@@ -10374,8 +10375,9 @@ function registerFeatureRequestRoutes(app: Express) {
         const blob = bucket.file(fileName);
         await blob.save(req.file.buffer, { contentType: req.file.mimetype });
         fileUrl = fileName;
-      } catch {
-        fileUrl = `local_${Date.now()}_${req.file.originalname}`;
+      } catch (uploadError) {
+        logger.error('[Upload] Object storage failed:', { error: uploadError });
+        return res.status(500).json({ success: false, message: 'فشل في رفع الملف. يرجى المحاولة مرة أخرى' });
       }
 
       const currentAttachments = (task.attachments as any[]) || [];

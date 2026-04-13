@@ -201,10 +201,11 @@ export default function ExternalSystemsManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (data: ExternalSystemFormData) => {
-      return apiRequest("POST", "/api/external-systems", {
+      const res = await apiRequest("POST", "/api/external-systems", {
         ...data,
         port: data.port ? parseInt(data.port as string) : null
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-systems"] });
@@ -213,17 +214,18 @@ export default function ExternalSystemsManagement() {
       form.reset();
       toast({ title: "تم إضافة النظام بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في إضافة النظام", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: async (data: ExternalSystemFormData) => {
-      return apiRequest("PUT", `/api/external-systems/${editingItem?.id}`, {
+      const res = await apiRequest("PUT", `/api/external-systems/${editingItem?.id}`, {
         ...data,
         port: data.port ? parseInt(data.port as string) : null
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-systems"] });
@@ -233,20 +235,23 @@ export default function ExternalSystemsManagement() {
       form.reset();
       toast({ title: "تم تحديث النظام بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في تحديث النظام", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteSystemMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/external-systems/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/external-systems/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-systems"] });
       invalidateRelatedQueries('/api/external-systems');
       toast({ title: "تم حذف النظام بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل حذف النظام", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 
@@ -278,7 +283,8 @@ export default function ExternalSystemsManagement() {
   const healthCheckMutation = useMutation({
     mutationFn: async (systemId: number) => {
       setCheckingHealth(systemId);
-      return apiRequest("POST", `/api/external-systems/${systemId}/health-check`);
+      const res = await apiRequest("POST", `/api/external-systems/${systemId}/health-check`);
+      return res.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-systems"] });
@@ -289,9 +295,9 @@ export default function ExternalSystemsManagement() {
         description: `الحالة: ${data.status === 'online' ? 'متصل' : data.status === 'offline' ? 'غير متصل' : 'متدهور'}`
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       setCheckingHealth(null);
-      toast({ title: "خطأ", description: "فشل في فحص النظام", variant: "destructive" });
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 

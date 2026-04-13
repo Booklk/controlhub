@@ -194,8 +194,8 @@ export default function TicketsManagement() {
         assigneeId: null,
       });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إنشاء التذكرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في إنشاء التذكرة', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -216,14 +216,15 @@ export default function TicketsManagement() {
       }
       toast({ title: 'تم تحديث حالة التذكرة' });
     },
-    onError: (error: any) => {
-      toast({ title: error.message || 'حدث خطأ في تحديث التذكرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في تحديث التذكرة', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteTicketMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/it-tickets/${id}`);
+      const res = await apiRequest('DELETE', `/api/it-tickets/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/it-tickets'] });
@@ -231,14 +232,18 @@ export default function TicketsManagement() {
       setSelectedTicket(null);
       toast({ title: 'تم حذف التذكرة بنجاح' });
     },
-    onError: (error: any) => {
-      toast({ title: error.message || 'حدث خطأ في حذف التذكرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في حذف التذكرة', description: error.message, variant: 'destructive' });
     },
   });
 
   const bulkUpdateStatusMutation = useMutation({
     mutationFn: async ({ ids, status }: { ids: number[]; status: string }) => {
-      await Promise.all(ids.map(id => apiRequest('PUT', `/api/it-tickets/${id}/status`, { status })));
+      const results = await Promise.all(ids.map(async (id) => {
+        const res = await apiRequest('PUT', `/api/it-tickets/${id}/status`, { status });
+        return res.json();
+      }));
+      return results;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/it-tickets'] });
@@ -247,14 +252,18 @@ export default function TicketsManagement() {
       setIsBulkMode(false);
       toast({ title: `تم تحديث ${selectedTicketIds.size} تذكرة بنجاح` });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في التحديث الجماعي', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في التحديث الجماعي', description: error.message, variant: 'destructive' });
     },
   });
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: number[]) => {
-      await Promise.all(ids.map(id => apiRequest('DELETE', `/api/it-tickets/${id}`)));
+      const results = await Promise.all(ids.map(async (id) => {
+        const res = await apiRequest('DELETE', `/api/it-tickets/${id}`);
+        return res.json();
+      }));
+      return results;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/it-tickets'] });
@@ -263,8 +272,8 @@ export default function TicketsManagement() {
       setIsBulkMode(false);
       toast({ title: 'تم حذف التذاكر المحددة' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في الحذف الجماعي', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في الحذف الجماعي', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -279,8 +288,8 @@ export default function TicketsManagement() {
       setTicketResponse('');
       toast({ title: 'تم إضافة الرد بنجاح' });
     },
-    onError: (error: any) => {
-      toast({ title: error.message || 'حدث خطأ في إضافة الرد', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في إضافة الرد', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -309,8 +318,8 @@ export default function TicketsManagement() {
       editForm.reset();
       toast({ title: 'تم تحديث التذكرة بنجاح' });
     },
-    onError: (error: any) => {
-      toast({ title: error.message || 'حدث خطأ في تحديث التذكرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في تحديث التذكرة', description: error.message, variant: 'destructive' });
     },
   });
 

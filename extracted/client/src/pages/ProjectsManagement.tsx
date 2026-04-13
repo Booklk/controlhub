@@ -137,14 +137,15 @@ export default function ProjectsManagement() {
       setSelectedProject(null);
       toast({ title: 'تم تحديث المشروع بنجاح' });
     },
-    onError: (error: any) => {
-      toast({ title: error.message || 'حدث خطأ في تحديث المشروع', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في تحديث المشروع', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/projects/${id}`);
+      const res = await apiRequest('DELETE', `/api/projects/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
@@ -152,8 +153,8 @@ export default function ProjectsManagement() {
       setSelectedProject(null);
       toast({ title: 'تم حذف المشروع بنجاح' });
     },
-    onError: (error: any) => {
-      toast({ title: error.message || 'حدث خطأ في حذف المشروع', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في حذف المشروع', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -253,8 +254,8 @@ export default function ProjectsManagement() {
       setSuccessProject({ id: data.id, nameAr: data.nameAr, code: data.code });
       form.reset();
     },
-    onError: (error: any) => {
-      toast({ title: error.message || 'حدث خطأ في إنشاء المشروع', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في إنشاء المشروع', description: error.message, variant: 'destructive' });
     },
   });
 

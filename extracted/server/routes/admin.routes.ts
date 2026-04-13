@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import {
-  storage, db, parseId, logger, cache, TTL, invalidateDashboardCaches,
+  storage, db, parseId, handleDbError, logger, cache, TTL, invalidateDashboardCaches,
   authenticateToken, crypto,
   sql, eq, and, desc,
   sessions, auditLogs, users, notifications,

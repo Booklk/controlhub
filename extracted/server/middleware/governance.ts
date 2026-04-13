@@ -187,21 +187,21 @@ export function enforcePermissions(resource: Resource): RequestHandler {
     const governance = (req as any).governance || {};
     
     if (!user) {
-      await logSecurityEvent('access_denied', 'unauthorized', req, null, resource);
-      return res.status(401).json({ 
-        success: false, 
+      logSecurityEvent('access_denied', 'unauthorized', req, null, resource).catch(() => {});
+      return res.status(401).json({
+        success: false,
         message: 'يجب تسجيل الدخول للوصول إلى هذا المورد',
         code: 'UNAUTHORIZED'
       });
     }
-    
+
     const action = ACTION_MAP[req.method] as Action || ACTIONS.VIEW;
     const hasAccess = hasPermission(user.role, resource, action);
-    
+
     if (!hasAccess) {
-      await logSecurityEvent('permission_denied', action, req, user.id, resource);
-      return res.status(403).json({ 
-        success: false, 
+      logSecurityEvent('permission_denied', action, req, user.id, resource).catch(() => {});
+      return res.status(403).json({
+        success: false,
         message: 'ليس لديك صلاحية للوصول إلى هذا المورد',
         code: 'FORBIDDEN',
         resource,
@@ -217,39 +217,43 @@ export function requireSecureAction(actionType: 'approve' | 'delete' | 'export')
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     const governance = (req as any).governance || {};
-    
+
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
+      return res.status(401).json({
+        success: false,
         message: 'يجب تسجيل الدخول',
         code: 'UNAUTHORIZED'
       });
     }
-    
-    await storage.createAuditLog({
-      userId: user.id,
-      sessionId: (req as any).session?.id || null,
-      action: `secure_${actionType}`,
-      actionCategory: 'security',
-      entityType: null,
-      entityId: null,
-      resource: null,
-      oldValue: null,
-      newValue: null,
-      changedFields: null,
-      ipAddress: governance.ipAddress,
-      userAgent: governance.userAgent,
-      requestId: governance.requestId,
-      requestMethod: req.method,
-      requestPath: req.path,
-      outcome: 'success',
-      severity: 'warning',
-      policyDecision: `${actionType}_initiated`,
-      errorMessage: null,
-      details: `عملية آمنة: ${actionType}`,
-      metadata: { actionType, userId: user.id },
-    });
-    
+
+    try {
+      await storage.createAuditLog({
+        userId: user.id,
+        sessionId: (req as any).session?.id || null,
+        action: `secure_${actionType}`,
+        actionCategory: 'security',
+        entityType: null,
+        entityId: null,
+        resource: null,
+        oldValue: null,
+        newValue: null,
+        changedFields: null,
+        ipAddress: governance.ipAddress,
+        userAgent: governance.userAgent,
+        requestId: governance.requestId,
+        requestMethod: req.method,
+        requestPath: req.path,
+        outcome: 'success',
+        severity: 'warning',
+        policyDecision: `${actionType}_initiated`,
+        errorMessage: null,
+        details: `عملية آمنة: ${actionType}`,
+        metadata: { actionType, userId: user.id },
+      });
+    } catch (error) {
+      logger.error('[Governance] Secure action audit failed:', { error });
+    }
+
     next();
   };
 }
@@ -371,35 +375,39 @@ export function rateLimiter(options: {
     
     if (record.count > options.maxRequests) {
       const governance = (req as any).governance || {};
-      
-      await storage.createAuditLog({
-        userId: user?.id || null,
-        sessionId: (req as any).session?.id || null,
-        action: 'rate_limited',
-        actionCategory: 'security',
-        entityType: null,
-        entityId: null,
-        resource: null,
-        oldValue: null,
-        newValue: null,
-        changedFields: null,
-        ipAddress: governance.ipAddress || getClientIp(req),
-        userAgent: governance.userAgent || req.headers['user-agent'],
-        requestId: governance.requestId,
-        requestMethod: req.method,
-        requestPath: req.path,
-        outcome: 'denied',
-        severity: 'warning',
-        policyDecision: 'rate_limit_exceeded',
-        errorMessage: null,
-        details: 'تجاوز حد الطلبات المسموح',
-        metadata: { 
-          key,
-          count: record.count,
-          maxRequests: options.maxRequests,
-        },
-      });
-      
+
+      try {
+        await storage.createAuditLog({
+          userId: user?.id || null,
+          sessionId: (req as any).session?.id || null,
+          action: 'rate_limited',
+          actionCategory: 'security',
+          entityType: null,
+          entityId: null,
+          resource: null,
+          oldValue: null,
+          newValue: null,
+          changedFields: null,
+          ipAddress: governance.ipAddress || getClientIp(req),
+          userAgent: governance.userAgent || req.headers['user-agent'],
+          requestId: governance.requestId,
+          requestMethod: req.method,
+          requestPath: req.path,
+          outcome: 'denied',
+          severity: 'warning',
+          policyDecision: 'rate_limit_exceeded',
+          errorMessage: null,
+          details: 'تجاوز حد الطلبات المسموح',
+          metadata: {
+            key,
+            count: record.count,
+            maxRequests: options.maxRequests,
+          },
+        });
+      } catch (error) {
+        logger.error('[Governance] Rate limit audit failed:', { error });
+      }
+
       return res.status(429).json({
         success: false,
         message: 'تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة لاحقاً',
@@ -415,36 +423,40 @@ export function rateLimiter(options: {
 export function sessionValidator(): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction) => {
     const session = (req as any).session;
-    
+
     if (session) {
       const now = new Date();
       if (session.expiresAt && new Date(session.expiresAt) < now) {
         const governance = (req as any).governance || {};
-        
-        await storage.createAuditLog({
-          userId: session.userId,
-          sessionId: session.id,
-          action: 'session_expired',
-          actionCategory: 'auth',
-          entityType: null,
-          entityId: null,
-          resource: null,
-          oldValue: null,
-          newValue: null,
-          changedFields: null,
-          ipAddress: governance.ipAddress || getClientIp(req),
-          userAgent: governance.userAgent || req.headers['user-agent'],
-          requestId: governance.requestId,
-          requestMethod: req.method,
-          requestPath: req.path,
-          outcome: 'denied',
-          severity: 'info',
-          policyDecision: 'session_expired',
-          errorMessage: null,
-          details: 'انتهت صلاحية الجلسة',
-          metadata: { sessionId: session.id },
-        });
-        
+
+        try {
+          await storage.createAuditLog({
+            userId: session.userId,
+            sessionId: session.id,
+            action: 'session_expired',
+            actionCategory: 'auth',
+            entityType: null,
+            entityId: null,
+            resource: null,
+            oldValue: null,
+            newValue: null,
+            changedFields: null,
+            ipAddress: governance.ipAddress || getClientIp(req),
+            userAgent: governance.userAgent || req.headers['user-agent'],
+            requestId: governance.requestId,
+            requestMethod: req.method,
+            requestPath: req.path,
+            outcome: 'denied',
+            severity: 'info',
+            policyDecision: 'session_expired',
+            errorMessage: null,
+            details: 'انتهت صلاحية الجلسة',
+            metadata: { sessionId: session.id },
+          });
+        } catch (error) {
+          logger.error('[Governance] Session expiry audit failed:', { error });
+        }
+
         return res.status(401).json({
           success: false,
           message: 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى',
@@ -452,7 +464,7 @@ export function sessionValidator(): RequestHandler {
         });
       }
     }
-    
+
     next();
   };
 }

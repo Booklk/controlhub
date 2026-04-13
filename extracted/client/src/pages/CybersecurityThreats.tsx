@@ -88,14 +88,15 @@ export default function CybersecurityThreats() {
       });
       toast({ title: "تم تقرير التهديد بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ في تقرير التهديد", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ في تقرير التهديد", description: error.message, variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return apiRequest('PUT', `/api/security-threats/${id}`, data);
+      const res = await apiRequest('PUT', `/api/security-threats/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم تحديث التهديد بنجاح' });
@@ -104,22 +105,23 @@ export default function CybersecurityThreats() {
       setIsEditDialogOpen(false);
       setEditingThreat(null);
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'فشل في تحديث التهديد', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/security-threats/${id}`);
+      const res = await apiRequest('DELETE', `/api/security-threats/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم حذف التهديد بنجاح' });
       queryClient.invalidateQueries({ queryKey: ['/api/security-threats'] });
       invalidateRelatedQueries('/api/security-threats');
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'فشل في حذف التهديد', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 

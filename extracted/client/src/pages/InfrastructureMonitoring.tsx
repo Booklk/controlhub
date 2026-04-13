@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,45 +54,51 @@ export default function InfrastructureMonitoring() {
 
   const createMonitoringMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('POST', '/api/infrastructure/monitoring', data);
+      const res = await apiRequest('POST', '/api/infrastructure/monitoring', data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/monitoring'] });
+      invalidateRelatedQueries('/api/infrastructure/monitoring');
       setIsAddDialogOpen(false);
       setFormData({ ...defaultFormState });
       toast({ title: "تم إضافة التنبيه بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في إضافة التنبيه", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteMonitoringMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/infrastructure/monitoring/${id}`);
+      const res = await apiRequest('DELETE', `/api/infrastructure/monitoring/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/monitoring'] });
+      invalidateRelatedQueries('/api/infrastructure/monitoring');
       toast({ title: "تم حذف التنبيه بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في حذف التنبيه", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const updateMonitoringMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return apiRequest('PUT', `/api/infrastructure/monitoring/${id}`, data);
+      const res = await apiRequest('PUT', `/api/infrastructure/monitoring/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/monitoring'] });
+      invalidateRelatedQueries('/api/infrastructure/monitoring');
       setIsAddDialogOpen(false);
       setEditing(null);
       setFormData({ ...defaultFormState });
       toast({ title: "تم تعديل التنبيه بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في تعديل التنبيه", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 

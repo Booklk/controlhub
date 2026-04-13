@@ -40,7 +40,7 @@ export default function InfrastructureNetwork() {
 
   const createNetworkMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('POST', '/api/infrastructure/networks', {
+      const res = await apiRequest('POST', '/api/infrastructure/networks', {
         name: data.name,
         networkType: data.networkType,
         subnet: data.subnet || "192.168.0.0/24",
@@ -50,6 +50,7 @@ export default function InfrastructureNetwork() {
         dnsServers: "8.8.8.8",
         location: 'الموقع الرئيسي'
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/networks'] });
@@ -58,29 +59,30 @@ export default function InfrastructureNetwork() {
       setNewNetwork({ name: "", networkType: "LAN", subnet: "", vlanId: "" });
       toast({ title: "تم إضافة الشبكة بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في إضافة الشبكة", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteNetworkMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/infrastructure/networks/${id}`);
+      const res = await apiRequest('DELETE', `/api/infrastructure/networks/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/networks'] });
       invalidateRelatedQueries('/api/infrastructure/networks');
       toast({ title: "تم حذف الشبكة بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في حذف الشبكة", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const updateNetworkMutation = useMutation({
     mutationFn: async (data: any) => {
       const { id, ...updateData } = data;
-      return apiRequest('PUT', `/api/infrastructure/networks/${id}`, {
+      const res = await apiRequest('PUT', `/api/infrastructure/networks/${id}`, {
         name: updateData.name,
         networkType: updateData.networkType,
         subnet: updateData.subnet || "192.168.0.0/24",
@@ -90,6 +92,7 @@ export default function InfrastructureNetwork() {
         dnsServers: "8.8.8.8",
         location: 'الموقع الرئيسي'
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/networks'] });
@@ -99,8 +102,8 @@ export default function InfrastructureNetwork() {
       setNewNetwork({ name: "", networkType: "LAN", subnet: "", vlanId: "" });
       toast({ title: "تم تحديث الشبكة بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في تحديث الشبكة", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 

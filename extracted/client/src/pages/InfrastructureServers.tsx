@@ -53,7 +53,7 @@ export default function InfrastructureServers() {
 
   const createServerMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('POST', '/api/infrastructure/servers', {
+      const res = await apiRequest('POST', '/api/infrastructure/servers', {
         name: data.nameAr || data.name,
         hostname: data.name,
         ipAddress: data.ipAddress,
@@ -66,6 +66,7 @@ export default function InfrastructureServers() {
         status: 'online',
         purpose: data.description
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/servers'] });
@@ -74,28 +75,29 @@ export default function InfrastructureServers() {
       setNewServer({ name: "", nameAr: "", type: "physical", ipAddress: "", os: "", cpu: "", ram: "", storage: "", location: "", description: "" });
       toast({ title: "تم إضافة الخادم بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في إضافة الخادم", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteServerMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/infrastructure/servers/${id}`);
+      const res = await apiRequest('DELETE', `/api/infrastructure/servers/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/servers'] });
       invalidateRelatedQueries('/api/infrastructure/servers');
       toast({ title: "تم حذف الخادم بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في حذف الخادم", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const updateServerMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return apiRequest('PUT', `/api/infrastructure/servers/${id}`, {
+      const res = await apiRequest('PUT', `/api/infrastructure/servers/${id}`, {
         name: data.nameAr || data.name,
         hostname: data.name,
         ipAddress: data.ipAddress,
@@ -107,6 +109,7 @@ export default function InfrastructureServers() {
         location: data.location,
         purpose: data.description
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/infrastructure/servers'] });
@@ -116,8 +119,8 @@ export default function InfrastructureServers() {
       setNewServer({ name: "", nameAr: "", type: "physical", ipAddress: "", os: "", cpu: "", ram: "", storage: "", location: "", description: "" });
       toast({ title: "تم تعديل الخادم بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في تعديل الخادم", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     }
   });
 

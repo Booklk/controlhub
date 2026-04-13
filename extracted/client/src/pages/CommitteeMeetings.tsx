@@ -120,7 +120,7 @@ export default function CommitteeMeetings() {
 
   const createMeetingMutation = useMutation({
     mutationFn: async (data: MeetingCreationFormData) => {
-      return apiRequest('POST', '/api/committee-meetings', {
+      const res = await apiRequest('POST', '/api/committee-meetings', {
         title: data.title,
         description: data.description,
         date: data.meetingDate,
@@ -130,6 +130,7 @@ export default function CommitteeMeetings() {
         agenda: data.agenda,
         meetingType: data.meetingType,
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم إنشاء الاجتماع بنجاح', description: 'تمت إضافة الاجتماع الجديد إلى القائمة' });
@@ -138,14 +139,14 @@ export default function CommitteeMeetings() {
       queryClient.invalidateQueries({ queryKey: ['/api/committee-meetings'] });
       invalidateRelatedQueries('/api/committee-meetings');
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء إنشاء الاجتماع', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async (data: MeetingCreationFormData) => {
-      return apiRequest('PATCH', `/api/committee-meetings/${editingItem?.id}`, {
+      const res = await apiRequest('PATCH', `/api/committee-meetings/${editingItem?.id}`, {
         title: data.title,
         description: data.description,
         date: data.meetingDate,
@@ -155,6 +156,7 @@ export default function CommitteeMeetings() {
         agenda: data.agenda,
         meetingType: data.meetingType,
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم تحديث الاجتماع بنجاح' });
@@ -164,20 +166,23 @@ export default function CommitteeMeetings() {
       queryClient.invalidateQueries({ queryKey: ['/api/committee-meetings'] });
       invalidateRelatedQueries('/api/committee-meetings');
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء تحديث الاجتماع', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/committee-meetings/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/committee-meetings/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/committee-meetings'] });
       invalidateRelatedQueries('/api/committee-meetings');
       toast({ title: 'تم حذف الاجتماع بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'فشل حذف الاجتماع', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -224,7 +229,8 @@ export default function CommitteeMeetings() {
   const saveAttendeesMutation = useMutation({
     mutationFn: async () => {
       const attendeesList = attendees.split('\n').filter(Boolean);
-      return apiRequest('PATCH', `/api/committee-meetings/${selectedMeeting!.id}`, { attendees: attendeesList });
+      const res = await apiRequest('PATCH', `/api/committee-meetings/${selectedMeeting!.id}`, { attendees: attendeesList });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/committee-meetings'] });
@@ -232,15 +238,16 @@ export default function CommitteeMeetings() {
       toast({ title: 'تم تحديث الحاضرين', description: 'تم حفظ قائمة الحاضرين بنجاح' });
       setIsAttendeesDialogOpen(false);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ', description: 'فشل في حفظ الحاضرين', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ', description: error.message, variant: 'destructive' });
     }
   });
 
   const saveAgendaMutation = useMutation({
     mutationFn: async () => {
       const agendaItems = agenda.split('\n').filter(Boolean);
-      return apiRequest('PATCH', `/api/committee-meetings/${selectedMeeting!.id}`, { agenda: agendaItems });
+      const res = await apiRequest('PATCH', `/api/committee-meetings/${selectedMeeting!.id}`, { agenda: agendaItems });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/committee-meetings'] });
@@ -248,8 +255,8 @@ export default function CommitteeMeetings() {
       toast({ title: 'تم تحديث جدول الأعمال', description: 'تم حفظ جدول الأعمال بنجاح' });
       setIsAgendaDialogOpen(false);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ', description: 'فشل في حفظ جدول الأعمال', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ', description: error.message, variant: 'destructive' });
     }
   });
 

@@ -37,7 +37,7 @@ async function sendEmailNonBlocking(userId: number, subject: string, htmlGenerat
     } catch (err) {
       logger.error(`Email send failed for user ${userId}`, { err });
     }
-  }).catch(() => {});
+  }).catch((err) => { logger.error('Email non-blocking failed', { err }); });
 }
 
 async function createNotificationSafe(data: {
@@ -644,17 +644,21 @@ export async function sendWeeklyReports() {
     // 2. أرسل لمدراء التقنية: تقرير شامل لكل الأقسام
     const directors = allUsers.filter((u: any) => u.portal === 'it_director' && u.emailNotificationsEnabled);
     for (const dir of directors) {
-      const deptSummaries = Object.entries(deptMap).map(([deptId, deptName]) => {
-        const dId = parseInt(deptId);
-        const deptTickets = allTickets.filter((t: any) => t.itDepartmentId === dId);
-        const openTickets = deptTickets.filter((t: any) => !['closed', 'resolved'].includes(t.status)).length;
-        const closedThisWeek = deptTickets.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && ['closed', 'resolved'].includes(t.status)).length;
-        const deptTasks = allTasks.filter((t: any) => t.departmentId === dId);
-        const overdueTasks = deptTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && !['completed', 'cancelled'].includes(t.status)).length;
-        return { deptName, openTickets, closedThisWeek, overdueTasks };
-      });
-      const html = generateWeeklyDirectorEmail(dir.name, deptSummaries, now);
-      await sendEmail(dir.email, `التقرير الأسبوعي - مدير التقنية - ${now.toLocaleDateString('ar-SA')}`, html);
+      try {
+        const deptSummaries = Object.entries(deptMap).map(([deptId, deptName]) => {
+          const dId = parseInt(deptId);
+          const deptTickets = allTickets.filter((t: any) => t.itDepartmentId === dId);
+          const openTickets = deptTickets.filter((t: any) => !['closed', 'resolved'].includes(t.status)).length;
+          const closedThisWeek = deptTickets.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && ['closed', 'resolved'].includes(t.status)).length;
+          const deptTasks = allTasks.filter((t: any) => t.departmentId === dId);
+          const overdueTasks = deptTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && !['completed', 'cancelled'].includes(t.status)).length;
+          return { deptName, openTickets, closedThisWeek, overdueTasks };
+        });
+        const html = generateWeeklyDirectorEmail(dir.name, deptSummaries, now);
+        await sendEmail(dir.email, `التقرير الأسبوعي - مدير التقنية - ${now.toLocaleDateString('ar-SA')}`, html);
+      } catch (err) {
+        logger.error(`Weekly report failed for director ${dir.id}`, { error: err });
+      }
     }
     
     // 3. أرسل لكل مدير قسم: تقرير قسمه فقط
@@ -662,21 +666,25 @@ export async function sendWeeklyReports() {
     const managers = allUsers.filter((u: any) => managerRoleSuffixes.some((r: string) => u.role === r) && u.emailNotificationsEnabled);
     
     for (const mgr of managers) {
-      const deptId = mgr.itDepartmentId || portalToDept[mgr.portal || ''];
-      if (!deptId) continue;
-      const deptName = deptMap[deptId] || 'قسم التقنية';
-      
-      const deptTickets = allTickets.filter((t: any) => t.itDepartmentId === deptId);
-      const openTickets = deptTickets.filter((t: any) => !['closed', 'resolved'].includes(t.status)).length;
-      const closedThisWeek = deptTickets.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && ['closed', 'resolved'].includes(t.status)).length;
-      const slaBreaches = deptTickets.filter((t: any) => t.slaDeadline && new Date(t.slaDeadline) < now && !['closed', 'resolved'].includes(t.status)).length;
-      
-      const deptTasks = allTasks.filter((t: any) => t.departmentId === deptId);
-      const overdueTasks = deptTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && !['completed', 'cancelled'].includes(t.status)).length;
-      const completedTasks = deptTasks.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && t.status === 'completed').length;
-      
-      const html = generateWeeklyManagerEmail(mgr.name, deptName, { openTickets, closedThisWeek, slaBreaches, overdueTasks, completedTasks }, now);
-      await sendEmail(mgr.email, `التقرير الأسبوعي - ${deptName} - ${now.toLocaleDateString('ar-SA')}`, html);
+      try {
+        const deptId = mgr.itDepartmentId || portalToDept[mgr.portal || ''];
+        if (!deptId) continue;
+        const deptName = deptMap[deptId] || 'قسم التقنية';
+
+        const deptTickets = allTickets.filter((t: any) => t.itDepartmentId === deptId);
+        const openTickets = deptTickets.filter((t: any) => !['closed', 'resolved'].includes(t.status)).length;
+        const closedThisWeek = deptTickets.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && ['closed', 'resolved'].includes(t.status)).length;
+        const slaBreaches = deptTickets.filter((t: any) => t.slaDeadline && new Date(t.slaDeadline) < now && !['closed', 'resolved'].includes(t.status)).length;
+
+        const deptTasks = allTasks.filter((t: any) => t.departmentId === deptId);
+        const overdueTasks = deptTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && !['completed', 'cancelled'].includes(t.status)).length;
+        const completedTasks = deptTasks.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && t.status === 'completed').length;
+
+        const html = generateWeeklyManagerEmail(mgr.name, deptName, { openTickets, closedThisWeek, slaBreaches, overdueTasks, completedTasks }, now);
+        await sendEmail(mgr.email, `التقرير الأسبوعي - ${deptName} - ${now.toLocaleDateString('ar-SA')}`, html);
+      } catch (err) {
+        logger.error(`Weekly report failed for manager ${mgr.id}`, { error: err });
+      }
     }
     
     logger.info(`Weekly reports sent: ${directors.length} directors, ${managers.length} managers`);
@@ -757,70 +765,74 @@ export async function checkAlertRules() {
     const rules = await db.select().from(alertRules).where(eq(alertRules.isActive, true));
     
     for (const rule of rules) {
-      let currentValue = 0;
-      const deptFilter = rule.itDepartmentId;
-      
-      if (rule.metric === 'sla_breached') {
-        const tickets = await db.select().from(itTickets)
-          .where(deptFilter
-            ? and(eq(itTickets.departmentId, deptFilter), isNull(itTickets.deletedAt))
-            : isNull(itTickets.deletedAt));
-        currentValue = tickets.filter((t: any) => t.slaDeadline && new Date(t.slaDeadline) < now && !['closed','resolved'].includes(t.status)).length;
-      } else if (rule.metric === 'open_tickets') {
-        const tickets = await db.select().from(itTickets)
-          .where(deptFilter
-            ? and(eq(itTickets.departmentId, deptFilter), isNull(itTickets.deletedAt))
-            : isNull(itTickets.deletedAt));
-        currentValue = tickets.filter((t: any) => !['closed','resolved'].includes(t.status)).length;
-      } else if (rule.metric === 'overdue_tasks') {
-        const allTasks = await db.select().from(tasks)
-          .where(deptFilter
-            ? and(eq(tasks.departmentId, deptFilter), isNull(tasks.deletedAt))
-            : isNull(tasks.deletedAt));
-        currentValue = allTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && !['completed','cancelled'].includes(t.status)).length;
-      } else if (rule.metric === 'pending_tickets') {
-        const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-        const tickets = await db.select().from(itTickets)
-          .where(deptFilter
-            ? and(eq(itTickets.departmentId, deptFilter), isNull(itTickets.deletedAt))
-            : isNull(itTickets.deletedAt));
-        currentValue = tickets.filter((t: any) => t.status === 'pending' && t.createdAt && new Date(t.createdAt) < threeDaysAgo).length;
-      }
-      
-      let conditionMet = false;
-      if (rule.operator === '>') conditionMet = currentValue > rule.threshold;
-      else if (rule.operator === '>=') conditionMet = currentValue >= rule.threshold;
-      else if (rule.operator === '<') conditionMet = currentValue < rule.threshold;
-      else if (rule.operator === '<=') conditionMet = currentValue <= rule.threshold;
-      else if (rule.operator === '=') conditionMet = currentValue === rule.threshold;
-      
-      if (!conditionMet) continue;
-      
-      const notifyRoles = (rule.notifyRoles as string[]) || [];
-      if (notifyRoles.length === 0) continue;
-      
-      const targetUsers = await db.select().from(users).where(eq(users.isActive, true));
-      
-      const METRIC_LABELS: Record<string, string> = {
-        sla_breached: 'تذاكر SLA منتهكة',
-        open_tickets: 'تذاكر مفتوحة',
-        overdue_tasks: 'مهام متأخرة',
-        pending_tickets: 'تذاكر معلقة'
-      };
-      const metricLabel = METRIC_LABELS[rule.metric] || rule.metric;
-      const message = `تنبيه: ${rule.name} — ${metricLabel} وصلت إلى ${currentValue} (الحد: ${rule.threshold})`;
-      
-      for (const u of targetUsers) {
-        if (notifyRoles.includes(u.role)) {
-          await createNotificationSafe({
-            userId: u.id,
-            type: 'system_alert',
-            title: `⚠️ تنبيه ذكي: ${rule.name}`,
-            message,
-            priority: 'high',
-            actionUrl: '/admin/alert-rules',
-          });
+      try {
+        let currentValue = 0;
+        const deptFilter = rule.itDepartmentId;
+
+        if (rule.metric === 'sla_breached') {
+          const tickets = await db.select().from(itTickets)
+            .where(deptFilter
+              ? and(eq(itTickets.departmentId, deptFilter), isNull(itTickets.deletedAt))
+              : isNull(itTickets.deletedAt));
+          currentValue = tickets.filter((t: any) => t.slaDeadline && new Date(t.slaDeadline) < now && !['closed','resolved'].includes(t.status)).length;
+        } else if (rule.metric === 'open_tickets') {
+          const tickets = await db.select().from(itTickets)
+            .where(deptFilter
+              ? and(eq(itTickets.departmentId, deptFilter), isNull(itTickets.deletedAt))
+              : isNull(itTickets.deletedAt));
+          currentValue = tickets.filter((t: any) => !['closed','resolved'].includes(t.status)).length;
+        } else if (rule.metric === 'overdue_tasks') {
+          const allTasks = await db.select().from(tasks)
+            .where(deptFilter
+              ? and(eq(tasks.departmentId, deptFilter), isNull(tasks.deletedAt))
+              : isNull(tasks.deletedAt));
+          currentValue = allTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && !['completed','cancelled'].includes(t.status)).length;
+        } else if (rule.metric === 'pending_tickets') {
+          const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+          const tickets = await db.select().from(itTickets)
+            .where(deptFilter
+              ? and(eq(itTickets.departmentId, deptFilter), isNull(itTickets.deletedAt))
+              : isNull(itTickets.deletedAt));
+          currentValue = tickets.filter((t: any) => t.status === 'pending' && t.createdAt && new Date(t.createdAt) < threeDaysAgo).length;
         }
+
+        let conditionMet = false;
+        if (rule.operator === '>') conditionMet = currentValue > rule.threshold;
+        else if (rule.operator === '>=') conditionMet = currentValue >= rule.threshold;
+        else if (rule.operator === '<') conditionMet = currentValue < rule.threshold;
+        else if (rule.operator === '<=') conditionMet = currentValue <= rule.threshold;
+        else if (rule.operator === '=') conditionMet = currentValue === rule.threshold;
+
+        if (!conditionMet) continue;
+
+        const notifyRoles = (rule.notifyRoles as string[]) || [];
+        if (notifyRoles.length === 0) continue;
+
+        const targetUsers = await db.select().from(users).where(eq(users.isActive, true));
+
+        const METRIC_LABELS: Record<string, string> = {
+          sla_breached: 'تذاكر SLA منتهكة',
+          open_tickets: 'تذاكر مفتوحة',
+          overdue_tasks: 'مهام متأخرة',
+          pending_tickets: 'تذاكر معلقة'
+        };
+        const metricLabel = METRIC_LABELS[rule.metric] || rule.metric;
+        const message = `تنبيه: ${rule.name} — ${metricLabel} وصلت إلى ${currentValue} (الحد: ${rule.threshold})`;
+
+        for (const u of targetUsers) {
+          if (notifyRoles.includes(u.role)) {
+            await createNotificationSafe({
+              userId: u.id,
+              type: 'system_alert',
+              title: `⚠️ تنبيه ذكي: ${rule.name}`,
+              message,
+              priority: 'high',
+              actionUrl: '/admin/alert-rules',
+            });
+          }
+        }
+      } catch (ruleErr) {
+        logger.error(`checkAlertRules: failed processing rule ${rule.id}`, { error: ruleErr });
       }
     }
     logger.info(`Alert rules checked`);
@@ -835,43 +847,47 @@ export async function runAutomationRules() {
     const rules = await db.select().from(automationRules).where(eq(automationRules.isActive, true));
     
     for (const rule of rules) {
-      if (rule.triggerType === 'ticket_pending_days') {
-        const days = Number(rule.triggerValue);
-        const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-        
-        const conditions = [
-          eq(itTickets.status, 'pending'),
-          isNull(itTickets.deletedAt),
-        ];
-        if (rule.itDepartmentId) conditions.push(eq(itTickets.departmentId, rule.itDepartmentId) as any);
-        
-        const pendingTickets = await db.select().from(itTickets).where(and(...conditions));
-        const oldPending = pendingTickets.filter((t: any) => t.createdAt && new Date(t.createdAt) < cutoff);
-        
-        for (const ticket of oldPending) {
-          if (rule.action === 'escalate' && ticket.status !== 'escalated') {
-            await db.update(itTickets).set({ status: 'escalated', updatedAt: new Date() }).where(eq(itTickets.id, ticket.id));
-            logger.info(`Automation: escalated ticket #${ticket.id}`);
-          } else if (rule.action === 'change_priority') {
-            await db.update(itTickets).set({ priority: (rule.actionValue || 'high') as any, updatedAt: new Date() }).where(eq(itTickets.id, ticket.id));
-          } else if (rule.action === 'notify_manager') {
-            const managers = await db.select().from(users).where(eq(users.isActive, true));
-            for (const u of managers) {
-              const isManager = (u.role as string)?.includes('manager') || u.role === 'it_director';
-              const inDept = !ticket.departmentId || u.itDepartmentId === ticket.departmentId;
-              if (isManager && inDept) {
-                await createNotificationSafe({
-                  userId: u.id, type: 'ticket_escalation',
-                  title: `تنبيه أتمتة: تذكرة معلقة منذ ${days} أيام`,
-                  message: `التذكرة #${(ticket as any).ticketNumber || ticket.id} لا تزال معلقة`,
-                  priority: 'high', actionUrl: `/tickets/${ticket.id}`,
-                });
+      try {
+        if (rule.triggerType === 'ticket_pending_days') {
+          const days = Number(rule.triggerValue);
+          const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+          const conditions = [
+            eq(itTickets.status, 'pending'),
+            isNull(itTickets.deletedAt),
+          ];
+          if (rule.itDepartmentId) conditions.push(eq(itTickets.departmentId, rule.itDepartmentId) as any);
+
+          const pendingTickets = await db.select().from(itTickets).where(and(...conditions));
+          const oldPending = pendingTickets.filter((t: any) => t.createdAt && new Date(t.createdAt) < cutoff);
+
+          for (const ticket of oldPending) {
+            if (rule.action === 'escalate' && ticket.status !== 'escalated') {
+              await db.update(itTickets).set({ status: 'escalated', updatedAt: new Date() }).where(eq(itTickets.id, ticket.id));
+              logger.info(`Automation: escalated ticket #${ticket.id}`);
+            } else if (rule.action === 'change_priority') {
+              await db.update(itTickets).set({ priority: (rule.actionValue || 'high') as any, updatedAt: new Date() }).where(eq(itTickets.id, ticket.id));
+            } else if (rule.action === 'notify_manager') {
+              const managers = await db.select().from(users).where(eq(users.isActive, true));
+              for (const u of managers) {
+                const isManager = (u.role as string)?.includes('manager') || u.role === 'it_director';
+                const inDept = !ticket.departmentId || u.itDepartmentId === ticket.departmentId;
+                if (isManager && inDept) {
+                  await createNotificationSafe({
+                    userId: u.id, type: 'ticket_escalation',
+                    title: `تنبيه أتمتة: تذكرة معلقة منذ ${days} أيام`,
+                    message: `التذكرة #${(ticket as any).ticketNumber || ticket.id} لا تزال معلقة`,
+                    priority: 'high', actionUrl: `/tickets/${ticket.id}`,
+                  });
+                }
               }
             }
           }
         }
+        await db.update(automationRules).set({ lastRunAt: now }).where(eq(automationRules.id, rule.id));
+      } catch (ruleErr) {
+        logger.error(`runAutomationRules: failed processing rule ${rule.id}`, { error: ruleErr });
       }
-      await db.update(automationRules).set({ lastRunAt: now }).where(eq(automationRules.id, rule.id));
     }
     logger.info(`Automation rules run completed`);
   } catch (error) {
@@ -896,90 +912,94 @@ export async function checkReferralEscalations() {
 
     let escalationCount = 0;
     for (const referral of activeReferrals) {
-      const slaAckHours = referral.slaAcknowledgeHours || 4;
-      const slaHours = referral.slaHours || 48;
-      const createdAt = new Date(referral.createdAt);
-      const ackDeadline = new Date(createdAt.getTime() + slaAckHours * 3600000);
-      const fullDeadline = referral.dueDate ? new Date(referral.dueDate) : new Date(createdAt.getTime() + slaHours * 3600000);
-      const currentLevel = referral.escalationLevel || 0;
+      try {
+        const slaAckHours = referral.slaAcknowledgeHours || 4;
+        const slaHours = referral.slaHours || 48;
+        const createdAt = new Date(referral.createdAt);
+        const ackDeadline = new Date(createdAt.getTime() + slaAckHours * 3600000);
+        const fullDeadline = referral.dueDate ? new Date(referral.dueDate) : new Date(createdAt.getTime() + slaHours * 3600000);
+        const currentLevel = referral.escalationLevel || 0;
 
-      // Level 1 escalation: No acknowledgment within slaAckHours → notify dept manager
-      if (
-        currentLevel === 0 &&
-        !referral.acknowledgedAt &&
-        referral.status === 'pending' &&
-        now > ackDeadline
-      ) {
-        await db.update(itReferrals)
-          .set({ escalationLevel: 1, escalatedAt: now, updatedAt: now })
-          .where(eq(itReferrals.id, referral.id));
+        // Level 1 escalation: No acknowledgment within slaAckHours → notify dept manager
+        if (
+          currentLevel === 0 &&
+          !referral.acknowledgedAt &&
+          referral.status === 'pending' &&
+          now > ackDeadline
+        ) {
+          await db.update(itReferrals)
+            .set({ escalationLevel: 1, escalatedAt: now, updatedAt: now })
+            .where(eq(itReferrals.id, referral.id));
 
-        await db.insert(itReferralHistory).values({
-          referralId: referral.id,
-          action: 'auto_escalated_L1',
-          performedById: 1,
-          fromStatus: referral.status,
-          toStatus: referral.status,
-          notes: `تصعيد تلقائي المستوى 1: لم يتم تأكيد الاستلام خلال ${slaAckHours} ساعات`
-        });
-
-        // Find dept manager and notify
-        const deptUsers = await db.select().from(users)
-          .where(and(
-            eq(users.itDepartmentId, referral.toDepartmentId),
-            sql`${users.role} LIKE '%manager%'`
-          ));
-
-        for (const mgr of deptUsers) {
-          await createNotificationSafe({
-            userId: mgr.id,
-            type: 'referral_escalated',
-            title: '⚠️ إحالة بدون تأكيد استلام',
-            message: `"${referral.title}" من ${DEPT_NAMES[referral.fromDepartmentId] || 'إدارة أخرى'} لم يتم تأكيد استلامها منذ ${slaAckHours} ساعات`,
-            priority: 'high',
-            entityType: 'it_referral',
-            entityId: referral.id,
-            actionUrl: DEPT_PATH[referral.toDepartmentId] || '/it-director/referrals',
+          await db.insert(itReferralHistory).values({
+            referralId: referral.id,
+            action: 'auto_escalated_L1',
+            performedById: 1,
+            fromStatus: referral.status,
+            toStatus: referral.status,
+            notes: `تصعيد تلقائي المستوى 1: لم يتم تأكيد الاستلام خلال ${slaAckHours} ساعات`
           });
+
+          // Find dept manager and notify
+          const deptUsers = await db.select().from(users)
+            .where(and(
+              eq(users.itDepartmentId, referral.toDepartmentId),
+              sql`${users.role} LIKE '%manager%'`
+            ));
+
+          for (const mgr of deptUsers) {
+            await createNotificationSafe({
+              userId: mgr.id,
+              type: 'referral_escalated',
+              title: '⚠️ إحالة بدون تأكيد استلام',
+              message: `"${referral.title}" من ${DEPT_NAMES[referral.fromDepartmentId] || 'إدارة أخرى'} لم يتم تأكيد استلامها منذ ${slaAckHours} ساعات`,
+              priority: 'high',
+              entityType: 'it_referral',
+              entityId: referral.id,
+              actionUrl: DEPT_PATH[referral.toDepartmentId] || '/it-director/referrals',
+            });
+          }
+          escalationCount++;
         }
-        escalationCount++;
-      }
 
-      // Level 2 escalation: No response within full SLA → notify IT Director
-      if (
-        currentLevel <= 1 &&
-        referral.status === 'pending' &&
-        now > fullDeadline &&
-        !referral.itDirectorEscalatedAt
-      ) {
-        await db.update(itReferrals)
-          .set({ escalationLevel: 2, itDirectorEscalatedAt: now, updatedAt: now })
-          .where(eq(itReferrals.id, referral.id));
+        // Level 2 escalation: No response within full SLA → notify IT Director
+        if (
+          currentLevel <= 1 &&
+          referral.status === 'pending' &&
+          now > fullDeadline &&
+          !referral.itDirectorEscalatedAt
+        ) {
+          await db.update(itReferrals)
+            .set({ escalationLevel: 2, itDirectorEscalatedAt: now, updatedAt: now })
+            .where(eq(itReferrals.id, referral.id));
 
-        await db.insert(itReferralHistory).values({
-          referralId: referral.id,
-          action: 'auto_escalated_L2',
-          performedById: 1,
-          fromStatus: referral.status,
-          toStatus: referral.status,
-          notes: `تصعيد تلقائي المستوى 2: تجاوزت مهلة SLA الكاملة (${slaHours}h) — تم إبلاغ مدير تقنية المعلومات`
-        });
-
-        // Notify IT Director
-        const directors = await db.select().from(users).where(eq(users.role, 'it_director' as any));
-        for (const director of directors) {
-          await createNotificationSafe({
-            userId: director.id,
-            type: 'referral_escalated',
-            title: '🔴 إحالة تجاوزت SLA — تحتاج تدخلك',
-            message: `"${referral.title}" من ${DEPT_NAMES[referral.fromDepartmentId] || 'إدارة'} إلى ${DEPT_NAMES[referral.toDepartmentId] || 'إدارة'} تجاوزت ${slaHours} ساعة بدون استجابة`,
-            priority: 'high',
-            entityType: 'it_referral',
-            entityId: referral.id,
-            actionUrl: '/it-director/referrals',
+          await db.insert(itReferralHistory).values({
+            referralId: referral.id,
+            action: 'auto_escalated_L2',
+            performedById: 1,
+            fromStatus: referral.status,
+            toStatus: referral.status,
+            notes: `تصعيد تلقائي المستوى 2: تجاوزت مهلة SLA الكاملة (${slaHours}h) — تم إبلاغ مدير تقنية المعلومات`
           });
+
+          // Notify IT Director
+          const directors = await db.select().from(users).where(eq(users.role, 'it_director' as any));
+          for (const director of directors) {
+            await createNotificationSafe({
+              userId: director.id,
+              type: 'referral_escalated',
+              title: '🔴 إحالة تجاوزت SLA — تحتاج تدخلك',
+              message: `"${referral.title}" من ${DEPT_NAMES[referral.fromDepartmentId] || 'إدارة'} إلى ${DEPT_NAMES[referral.toDepartmentId] || 'إدارة'} تجاوزت ${slaHours} ساعة بدون استجابة`,
+              priority: 'high',
+              entityType: 'it_referral',
+              entityId: referral.id,
+              actionUrl: '/it-director/referrals',
+            });
+          }
+          escalationCount++;
         }
-        escalationCount++;
+      } catch (refErr) {
+        logger.error(`checkReferralEscalations: failed processing referral ${referral.id}`, { error: refErr });
       }
     }
     if (escalationCount > 0) logger.info(`Referral escalations: ${escalationCount} processed`);
@@ -1007,21 +1027,25 @@ export function startNotificationScheduler() {
   }
 
   const checkAll = async () => {
-    const userCheck = await hasActiveUsers();
-    if (userCheck.dbError) {
-      logger.error('Database error during user check — skipping scheduled checks (will retry next cycle)');
-      return;
+    try {
+      const userCheck = await hasActiveUsers();
+      if (userCheck.dbError) {
+        logger.error('Database error during user check — skipping scheduled checks (will retry next cycle)');
+        return;
+      }
+      if (!userCheck.exists) {
+        logger.info('No active users — skipping scheduled checks');
+        return;
+      }
+      await checkOverdueTasksAndSLAs();
+      await checkAlertRules();
+      await runAutomationRules();
+      await checkReferralEscalations();
+    } catch (err) {
+      logger.error('checkAll scheduler error', { error: err });
     }
-    if (!userCheck.exists) {
-      logger.info('No active users — skipping scheduled checks');
-      return;
-    }
-    await checkOverdueTasksAndSLAs();
-    await checkAlertRules();
-    await runAutomationRules();
-    await checkReferralEscalations();
   };
-  checkAll();
+  checkAll().catch((err) => { logger.error('checkAll initial run failed', { error: err }); });
   checkInterval = setInterval(checkAll, 10 * 60 * 1000);
 
   const checkSLAFast = async () => {

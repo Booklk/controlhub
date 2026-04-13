@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useConfirmDialog, ConfirmDialog } from '@/components/ConfirmDialog';
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -158,42 +158,48 @@ export default function ITAssetsManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<ITAsset>) => {
-      return apiRequest("POST", "/api/it-assets", data);
+      const res = await apiRequest("POST", "/api/it-assets", data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/it-assets"] });
+      invalidateRelatedQueries('/api/it-assets');
       toast({ title: "تم إنشاء الأصل بنجاح" });
       setIsAddDialogOpen(false);
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في إنشاء الأصل", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في إنشاء الأصل", description: error.message, variant: "destructive" });
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<ITAsset> }) => {
-      return apiRequest("PUT", `/api/it-assets/${id}`, data);
+      const res = await apiRequest("PUT", `/api/it-assets/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/it-assets"] });
+      invalidateRelatedQueries('/api/it-assets');
       toast({ title: "تم تحديث الأصل بنجاح" });
       setEditingAsset(null);
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في تحديث الأصل", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في تحديث الأصل", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/it-assets/${id}`);
+      const res = await apiRequest("DELETE", `/api/it-assets/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/it-assets"] });
+      invalidateRelatedQueries('/api/it-assets');
       toast({ title: "تم حذف الأصل بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في حذف الأصل", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في حذف الأصل", description: error.message, variant: "destructive" });
     }
   });
 

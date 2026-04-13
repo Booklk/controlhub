@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import {
-  storage, db, parseId, logger, invalidateDashboardCaches,
+  storage, db, parseId, handleDbError, logger, invalidateDashboardCaches,
   authenticateToken, crypto, sql, eq, and, isNull, inArray, desc,
   users, itTickets, auditLogs, emailIntegrationKeys, ticketTemplates,
   requirePortal, requireUpdate, RESOURCES,
@@ -209,7 +209,7 @@ export function registerTicketRoutes(app: Express) {
       res.status(201).json(ticketResult);
     } catch (error) {
       logger.error('Error creating ticket:', { error });
-      res.status(500).json({ error: 'حدث خطأ في إنشاء التذكرة' });
+      handleDbError(error, res, 'إنشاء التذكرة');
     }
   });
 
@@ -259,7 +259,7 @@ export function registerTicketRoutes(app: Express) {
       invalidateDashboardCaches();
       res.json(updatedData);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في تحديث التذكرة' });
+      handleDbError(error, res, 'تحديث التذكرة');
     }
   });
 
@@ -327,7 +327,7 @@ export function registerTicketRoutes(app: Express) {
       }
       res.json(updatedData);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في تحديث حالة التذكرة' });
+      handleDbError(error, res, 'تحديث حالة التذكرة');
     }
   });
 
@@ -373,7 +373,7 @@ export function registerTicketRoutes(app: Express) {
 
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في حذف التذكرة' });
+      handleDbError(error, res, 'حذف التذكرة');
     }
   });
 
@@ -410,7 +410,7 @@ export function registerTicketRoutes(app: Express) {
       });
       res.json({ success: true, message: 'تم إضافة التعليق بنجاح' });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في إضافة التعليق' });
+      handleDbError(error, res, 'إضافة التعليق');
     }
   });
 
@@ -452,7 +452,7 @@ export function registerTicketRoutes(app: Express) {
       res.status(201).json(result);
     } catch (error) {
       logger.error('Error creating email integration key:', { error });
-      res.status(500).json({ error: 'حدث خطأ في إنشاء مفتاح الربط' });
+      handleDbError(error, res, 'إنشاء مفتاح الربط');
     }
   });
 
@@ -463,7 +463,7 @@ export function registerTicketRoutes(app: Express) {
       await db.delete(emailIntegrationKeys).where(eq(emailIntegrationKeys.id, keyId));
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في حذف مفتاح الربط' });
+      handleDbError(error, res, 'حذف مفتاح الربط');
     }
   });
 
@@ -557,7 +557,7 @@ export function registerTicketRoutes(app: Express) {
       });
     } catch (error) {
       logger.error('Error creating ticket from email:', { error });
-      res.status(500).json({ error: 'حدث خطأ في إنشاء التذكرة من البريد' });
+      handleDbError(error, res, 'إنشاء التذكرة من البريد');
     }
   });
 
@@ -603,7 +603,7 @@ export function registerTicketRoutes(app: Express) {
       invalidateDashboardCaches();
       res.json({ updated: succeeded.length, failed: failed.length > 0 ? failed : undefined });
     } catch (error) {
-      res.status(500).json({ error: 'خطأ في التحديث الجماعي' });
+      handleDbError(error, res, 'التحديث الجماعي لحالة التذاكر');
     }
   });
 
@@ -631,7 +631,7 @@ export function registerTicketRoutes(app: Express) {
       });
       res.json({ updated: ids.length });
     } catch (error) {
-      res.status(500).json({ error: 'خطأ في التحديث الجماعي' });
+      handleDbError(error, res, 'التحديث الجماعي لأولوية التذاكر');
     }
   });
 
@@ -655,7 +655,7 @@ export function registerTicketRoutes(app: Express) {
       });
       res.json({ deleted: ids.length });
     } catch (error) {
-      res.status(500).json({ error: 'خطأ في الحذف الجماعي' });
+      handleDbError(error, res, 'الحذف الجماعي للتذاكر');
     }
   });
 
@@ -681,7 +681,7 @@ export function registerTicketRoutes(app: Express) {
       res.json({ success: true, count: ids.length });
     } catch (error) {
       logger.error('Bulk assign error:', { error });
-      res.status(500).json({ error: 'حدث خطأ في الإسناد الجماعي' });
+      handleDbError(error, res, 'الإسناد الجماعي للتذاكر');
     }
   });
 
@@ -722,7 +722,7 @@ export function registerTicketRoutes(app: Express) {
         isActive: true, createdBy: req.user.id
       }).returning();
       res.status(201).json(tpl);
-    } catch (e) { res.status(500).json({ error: 'خطأ في إنشاء القالب' }); }
+    } catch (e) { handleDbError(e, res, 'إنشاء قالب التذكرة'); }
   });
 
   app.put('/api/ticket-templates/:id', authenticateToken, async (req: any, res) => {
@@ -739,7 +739,7 @@ export function registerTicketRoutes(app: Express) {
       }).where(eq(ticketTemplates.id, id)).returning();
       if (!tpl) return res.status(404).json({ error: 'القالب غير موجود' });
       res.json(tpl);
-    } catch (e) { res.status(500).json({ error: 'خطأ في تعديل القالب' }); }
+    } catch (e) { handleDbError(e, res, 'تعديل قالب التذكرة'); }
   });
 
   app.delete('/api/ticket-templates/:id', authenticateToken, async (req: any, res) => {
@@ -749,7 +749,7 @@ export function registerTicketRoutes(app: Express) {
       if (!id) return;
       await db.delete(ticketTemplates).where(eq(ticketTemplates.id, id));
       res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: 'خطأ في حذف القالب' }); }
+    } catch (e) { handleDbError(e, res, 'حذف قالب التذكرة'); }
   });
 
 }

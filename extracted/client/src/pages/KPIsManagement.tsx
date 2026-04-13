@@ -110,6 +110,7 @@ export default function KPIsManagement({ portalName = "it_director", navGroups =
 
   const createMutation = useMutation({
     mutationFn: async (data: KPIFormData) => {
+      const deptId = data.departmentId && data.departmentId !== "none" ? parseInt(data.departmentId) : null;
       const payload = {
         metricName: data.name,
         metricType: data.category,
@@ -119,9 +120,10 @@ export default function KPIsManagement({ portalName = "it_director", navGroups =
         period: data.frequency,
         periodDate: new Date().toISOString(),
         notes: data.description,
-        departmentId: data.departmentId && data.departmentId !== "none" ? parseInt(data.departmentId) : null,
+        departmentId: isNaN(deptId as number) ? null : deptId,
       };
-      return apiRequest("POST", "/api/kpis", payload);
+      const res = await apiRequest("POST", "/api/kpis", payload);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith('/api/kpis') });
@@ -130,13 +132,14 @@ export default function KPIsManagement({ portalName = "it_director", navGroups =
       setIsAddDialogOpen(false);
       form.reset();
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في إنشاء المؤشر", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في إنشاء المؤشر", description: error.message, variant: "destructive" });
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: async (data: KPIFormData) => {
+      const deptId = data.departmentId && data.departmentId !== "none" ? parseInt(data.departmentId) : null;
       const payload = {
         metricName: data.name,
         metricType: data.category,
@@ -145,9 +148,10 @@ export default function KPIsManagement({ portalName = "it_director", navGroups =
         unit: data.unit,
         period: data.frequency,
         notes: data.description,
-        departmentId: data.departmentId && data.departmentId !== "none" ? parseInt(data.departmentId) : null,
+        departmentId: isNaN(deptId as number) ? null : deptId,
       };
-      return apiRequest("PUT", `/api/kpis/${editingItem?.id}`, payload);
+      const res = await apiRequest("PUT", `/api/kpis/${editingItem?.id}`, payload);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith('/api/kpis') });
@@ -157,20 +161,23 @@ export default function KPIsManagement({ portalName = "it_director", navGroups =
       setEditingItem(null);
       form.reset();
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في تحديث المؤشر", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في تحديث المؤشر", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/kpis/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/kpis/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith('/api/kpis') });
       invalidateRelatedQueries('/api/kpis');
       toast({ title: "تم حذف المؤشر بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل حذف المؤشر", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في حذف المؤشر", description: error.message, variant: "destructive" });
     },
   });
 

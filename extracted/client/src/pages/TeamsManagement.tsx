@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,31 +179,35 @@ export default function TeamsManagement() {
 
   const createMemberMutation = useMutation({
     mutationFn: async (data: TeamMemberFormData) => {
-      return apiRequest("POST", "/api/team-members", data);
+      const res = await apiRequest("POST", "/api/team-members", data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      invalidateRelatedQueries("/api/team-members");
       toast({ title: "تم إضافة العضو بنجاح" });
       setIsAddMemberDialogOpen(false);
       memberForm.reset({ name: "", email: "", itDepartmentId: managerDeptId });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في إضافة العضو", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const createTeamMutation = useMutation({
     mutationFn: async (data: TeamCreationFormData) => {
-      return apiRequest("POST", "/api/teams", data);
+      const res = await apiRequest("POST", "/api/teams", data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      invalidateRelatedQueries("/api/team-members");
       toast({ title: "تم إنشاء الفريق بنجاح" });
       setIsCreateTeamDialogOpen(false);
       teamForm.reset();
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في إنشاء الفريق", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
@@ -219,30 +223,34 @@ export default function TeamsManagement() {
 
   const updateMemberMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: TeamMemberFormData }) => {
-      return apiRequest("PUT", `/api/team-members/${id}`, data);
+      const res = await apiRequest("PUT", `/api/team-members/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      invalidateRelatedQueries("/api/team-members");
       toast({ title: "تم تحديث بيانات العضو بنجاح" });
       setIsEditMemberDialogOpen(false);
       setEditingMember(null);
       editMemberForm.reset();
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في تحديث بيانات العضو", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteMemberMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/team-members/${id}`);
+      const res = await apiRequest("DELETE", `/api/team-members/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      invalidateRelatedQueries("/api/team-members");
       toast({ title: "تم حذف العضو بنجاح" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في حذف العضو", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 

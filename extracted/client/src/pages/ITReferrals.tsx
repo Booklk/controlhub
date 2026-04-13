@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import DashboardLayout from "@/components/DashboardLayout";
 import { itDirectorNavGroups } from "@/lib/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -166,70 +166,83 @@ export default function ITReferrals() {
       return res.json();
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/it-referrals'] });
+      invalidateRelatedQueries('/api/it-referrals');
       setCreatedRefNumber(data?.referralNumber || `REF-${data?.id || Date.now()}`);
       setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: 9, toDepartmentId: 10, reason: "", dueDate: "", slaHours: 48, attachments: [] });
     },
-    onError: () => toast({ title: "خطأ في إنشاء الإحالة", variant: "destructive" })
+    onError: (error: Error) => toast({ title: "خطأ في إنشاء الإحالة", description: error.message, variant: "destructive" })
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: number; status: string; responseNote: string }) =>
-      apiRequest('PUT', `/api/it-referrals/${id}/status`, data),
+    mutationFn: async ({ id, ...data }: { id: number; status: string; responseNote: string }) => {
+      const res = await apiRequest('PUT', `/api/it-referrals/${id}/status`, data);
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/it-referrals'] });
+      invalidateRelatedQueries('/api/it-referrals');
       setIsStatusOpen(false);
       toast({ title: "✅ تم تحديث حالة الإحالة" });
     },
-    onError: () => toast({ title: "خطأ في تحديث الحالة", variant: "destructive" })
+    onError: (error: Error) => toast({ title: "خطأ في تحديث الحالة", description: error.message, variant: "destructive" })
   });
 
   const delegateMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: number; delegatedToDepartmentId: string; reason: string }) =>
-      apiRequest('POST', `/api/it-referrals/${id}/delegate`, data),
+    mutationFn: async ({ id, ...data }: { id: number; delegatedToDepartmentId: string; reason: string }) => {
+      const res = await apiRequest('POST', `/api/it-referrals/${id}/delegate`, data);
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/it-referrals'] });
+      invalidateRelatedQueries('/api/it-referrals');
       setIsDelegateOpen(false);
       toast({ title: "✅ تم تفويض الإحالة" });
     },
-    onError: () => toast({ title: "خطأ في التفويض", variant: "destructive" })
+    onError: (error: Error) => toast({ title: "خطأ في التفويض", description: error.message, variant: "destructive" })
   });
 
   const importMutation = useMutation({
-    mutationFn: (data: typeof outlookConfig) => apiRequest('POST', '/api/it-referrals/import-outlook', data),
+    mutationFn: async (data: typeof outlookConfig) => {
+      const res = await apiRequest('POST', '/api/it-referrals/import-outlook', data);
+      return res.json();
+    },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/it-referrals'] });
+      invalidateRelatedQueries('/api/it-referrals');
       setIsOutlookOpen(false);
       toast({
         title: `✅ تم الاستيراد`,
         description: `استُوردت ${data.imported} إحالة جديدة${data.skipped ? `، وتم تخطي ${data.skipped} مكررة` : ''}`
       });
     },
-    onError: (err: any) => toast({
+    onError: (error: Error) => toast({
       title: "خطأ في الاستيراد من Outlook",
-      description: err?.message || "تحقق من إعدادات IMAP",
+      description: error.message,
       variant: "destructive"
     })
   });
 
   const addAttachmentsMutation = useMutation({
-    mutationFn: ({ id, attachments }: { id: number; attachments: FileAttachmentData[] }) =>
-      apiRequest('POST', `/api/it-referrals/${id}/attachments`, { attachments }),
+    mutationFn: async ({ id, attachments }: { id: number; attachments: FileAttachmentData[] }) => {
+      const res = await apiRequest('POST', `/api/it-referrals/${id}/attachments`, { attachments });
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/it-referrals'] });
+      invalidateRelatedQueries('/api/it-referrals');
       if (selectedReferral?.id) queryClient.invalidateQueries({ queryKey: ['/api/it-referrals', selectedReferral.id] });
       toast({ title: "✅ تم حفظ المرفقات" });
     },
-    onError: () => toast({ title: "خطأ في حفظ المرفقات", variant: "destructive" })
+    onError: (error: Error) => toast({ title: "خطأ في حفظ المرفقات", description: error.message, variant: "destructive" })
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/it-referrals/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/it-referrals/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/it-referrals'] });
+      invalidateRelatedQueries('/api/it-referrals');
       setIsDetailOpen(false);
       toast({ title: "تم حذف الإحالة" });
-    }
+    },
+    onError: (error: Error) => toast({ title: "خطأ في حذف الإحالة", description: error.message, variant: "destructive" })
   });
 
   const getDeptName = (id: number) => IT_DEPARTMENTS_LIST.find(d => d.id === id)?.nameAr || `إدارة ${id}`;

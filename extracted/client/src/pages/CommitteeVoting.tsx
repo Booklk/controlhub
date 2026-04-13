@@ -405,27 +405,29 @@ export default function CommitteeVoting() {
 
  const closeSessionMutation = useMutation({
  mutationFn: async (id: number) => {
-   return apiRequest('PUT', `/api/voting-sessions/${id}/finalize`, {});
+   const res = await apiRequest('PUT', `/api/voting-sessions/${id}/finalize`, {});
+   return res.json();
  },
  onSuccess: () => {
    toast({ title: 'تم إغلاق التصويت بنجاح', description: 'تم تسجيل نتائج التصويت وإغلاق الجلسة' });
    queryClient.invalidateQueries({ queryKey: ['/api/voting-sessions'] });
    invalidateRelatedQueries('/api/voting-sessions');
  },
- onError: () => {
-   toast({ title: 'خطأ', description: 'حدث خطأ أثناء إغلاق جلسة التصويت', variant: 'destructive' });
+ onError: (error: Error) => {
+   toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
  },
  });
 
  const createProposalMutation = useMutation({
  mutationFn: async (data: VotingProposalFormData) => {
- return apiRequest('POST', '/api/voting-sessions', {
+ const res = await apiRequest('POST', '/api/voting-sessions', {
  title: data.title,
  description: data.description,
  votingType: data.votingType,
  endDate: data.deadline,
  quorumRequired: data.minimumQuorum ? parseInt(String(data.minimumQuorum)) : 50
  });
+ return res.json();
  },
  onSuccess: () => {
  toast({ 
@@ -436,26 +438,27 @@ export default function CommitteeVoting() {
  queryClient.invalidateQueries({ queryKey: ['/api/voting-sessions'] });
  invalidateRelatedQueries('/api/voting-sessions');
  },
- onError: (error: any) => {
- toast({ 
- title: 'خطأ', 
- description: error?.message || 'حدث خطأ أثناء إنشاء المقترح', 
- variant: 'destructive' 
+ onError: (error: Error) => {
+ toast({
+ title: 'خطأ',
+ description: error.message,
+ variant: 'destructive'
  });
  },
  });
 
  const castVoteMutation = useMutation({
  mutationFn: async (data: { sessionId: number; vote: 'approve' | 'reject' | 'abstain' }) => {
- return apiRequest('POST', `/api/voting-sessions/${data.sessionId}/vote`, { vote: data.vote });
+ const res = await apiRequest('POST', `/api/voting-sessions/${data.sessionId}/vote`, { vote: data.vote });
+ return res.json();
  },
  onSuccess: () => {
  toast({ title: 'تم تسجيل تصويتك بنجاح', description: 'شكراً لمشاركتك في التصويت' });
  queryClient.invalidateQueries({ queryKey: ['/api/voting-sessions'] });
  invalidateRelatedQueries('/api/voting-sessions');
  },
- onError: () => {
- toast({ title: 'خطأ', description: 'حدث خطأ أثناء تسجيل التصويت', variant: 'destructive' });
+ onError: (error: Error) => {
+ toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
  },
  });
 

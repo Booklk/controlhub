@@ -192,7 +192,7 @@ export default function UsersManagement() {
       if (viewingUser?.id === vars.id) setViewingUser(prev => prev ? { ...prev, isActive: vars.isActive } : null);
       toast({ title: vars.isActive ? 'تم تفعيل الحساب' : 'تم تعطيل الحساب' });
     },
-    onError: () => toast({ title: 'حدث خطأ', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'حدث خطأ', description: error.message, variant: 'destructive' }),
   });
 
   const createUserMutation = useMutation({
@@ -214,7 +214,7 @@ export default function UsersManagement() {
       form.reset();
       toast({ title: 'تم إنشاء المستخدم بنجاح', description: 'سيتم إرسال رابط التفعيل عبر البريد الإلكتروني' });
     },
-    onError: (e: any) => toast({ title: e.message || 'حدث خطأ في إنشاء المستخدم', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'حدث خطأ في إنشاء المستخدم', description: error.message, variant: 'destructive' }),
   });
 
   const updateUserMutation = useMutation({
@@ -229,7 +229,7 @@ export default function UsersManagement() {
       setEditingUser(null);
       toast({ title: 'تم تحديث المستخدم بنجاح' });
     },
-    onError: () => toast({ title: 'حدث خطأ في تحديث المستخدم', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'حدث خطأ في تحديث المستخدم', description: error.message, variant: 'destructive' }),
   });
 
   const deleteUserMutation = useMutation({
@@ -245,7 +245,7 @@ export default function UsersManagement() {
       setIsViewSheetOpen(false);
       toast({ title: 'تم حذف المستخدم بنجاح' });
     },
-    onError: (e: any) => toast({ title: e.message || 'حدث خطأ في حذف المستخدم', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'حدث خطأ في حذف المستخدم', description: error.message, variant: 'destructive' }),
   });
 
   const revokeSessionsMutation = useMutation({
@@ -257,7 +257,7 @@ export default function UsersManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/users', viewingUser?.id, 'stats'] });
       toast({ title: 'تم إلغاء جميع جلسات المستخدم بنجاح' });
     },
-    onError: () => toast({ title: 'حدث خطأ في إلغاء الجلسات', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'حدث خطأ في إلغاء الجلسات', description: error.message, variant: 'destructive' }),
   });
 
   const resetPasswordMutation = useMutation({
@@ -266,7 +266,7 @@ export default function UsersManagement() {
       return res.json();
     },
     onSuccess: () => toast({ title: 'تم إرسال رابط إعادة ضبط كلمة المرور عبر البريد الإلكتروني' }),
-    onError: () => toast({ title: 'حدث خطأ في إرسال رابط الاسترداد', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'حدث خطأ في إرسال رابط الاسترداد', description: error.message, variant: 'destructive' }),
   });
 
   const resendActivationMutation = useMutation({
@@ -275,7 +275,7 @@ export default function UsersManagement() {
       return res.json();
     },
     onSuccess: () => toast({ title: 'تم إرسال رابط التفعيل بنجاح' }),
-    onError: () => toast({ title: 'حدث خطأ في إرسال رابط التفعيل', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'حدث خطأ في إرسال رابط التفعيل', description: error.message, variant: 'destructive' }),
   });
 
   // Filtering
