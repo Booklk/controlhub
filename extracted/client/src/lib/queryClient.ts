@@ -24,7 +24,16 @@ async function throwIfResNotOk(res: Response) {
       handleSessionExpired();
     }
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let message = `${res.status}: ${text}`;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed.error) {
+        message = parsed.error;
+      }
+    } catch {
+      // text is not JSON, use raw text
+    }
+    throw new Error(message);
   }
 }
 

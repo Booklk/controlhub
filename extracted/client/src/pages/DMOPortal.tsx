@@ -361,11 +361,10 @@ export default function DMOPortal() {
       toast({ title: `تم رفع الدليل: ${data.title || evidenceForm.title}` });
       setEvidenceForm({ title: '', requirementId: '', description: '' });
       setEvidenceFile(null);
-      setIsAddEvidenceOpen(false);
-      setSuccessEvidence(null);
+      setSuccessEvidence({ id: data.id, title: data.title || evidenceForm.title });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في رفع الدليل', variant: 'destructive' });
+    onError: (error: any) => {
+      toast({ title: error.message || 'حدث خطأ في رفع الدليل', variant: 'destructive' });
     }
   });
 
@@ -437,8 +436,8 @@ export default function DMOPortal() {
       queryClient.invalidateQueries({ queryKey: ['/api/evidences'] });
       toast({ title: vars.status === 'approved' ? '✓ تم اعتماد الدليل' : 'تم رفض الدليل' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في مراجعة الدليل', variant: 'destructive' });
+    onError: (error: any) => {
+      toast({ title: error.message || 'حدث خطأ في مراجعة الدليل', variant: 'destructive' });
     }
   });
 
@@ -1788,7 +1787,7 @@ export default function DMOPortal() {
         <Card className="card-premium">
           <CardContent className="p-6 text-center">
             <XCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-2xl font-bold">0</p>
+            <p className="text-2xl font-bold">{evidences.filter((e: any) => e.status === 'rejected').length}</p>
             <p className="text-sm text-muted-foreground">مرفوضة</p>
           </CardContent>
         </Card>
@@ -1832,9 +1831,11 @@ export default function DMOPortal() {
                     {evidence.requirementId ? `REQ-${String(evidence.requirementId).padStart(3, '0')}` : '—'}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {evidence.fileType ? (
-                      <Badge variant="outline" className="text-xs">{evidence.fileType.split('/').pop()?.toUpperCase()}</Badge>
-                    ) : '—'}
+                    {(() => {
+                      const req = requirements.find((r: any) => r.id === evidence.requirementId);
+                      const domain = req ? domains.find((d: any) => d.id === req.domainId) : null;
+                      return domain?.nameAr || '—';
+                    })()}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(evidence.createdAt || Date.now()).toLocaleDateString('ar-SA')}

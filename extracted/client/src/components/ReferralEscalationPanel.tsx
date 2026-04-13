@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 const DEPARTMENTS = [
+  { id: 5, name: "مكتب إدارة البيانات", code: "DMO" },
   { id: 9, name: "البنية التحتية", code: "INFRA" },
   { id: 10, name: "الأمن السيبراني", code: "CYBER" },
   { id: 11, name: "التحول الرقمي", code: "DIGITAL" },

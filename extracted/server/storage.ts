@@ -665,12 +665,12 @@ export class DatabaseStorage implements IStorage {
   // Requirements
   async getRequirements(): Promise<Requirement[]> {
     const database = getDb();
-    return await database.select().from(requirements).where(isNull(requirements.deletedAt));
+    return await database.select().from(requirements).where(and(isNull(requirements.deletedAt), eq(requirements.isActive, true)));
   }
 
   async getRequirementsByDomain(domainId: number): Promise<Requirement[]> {
     const database = getDb();
-    return await database.select().from(requirements).where(and(eq(requirements.domainId, domainId), isNull(requirements.deletedAt)));
+    return await database.select().from(requirements).where(and(eq(requirements.domainId, domainId), isNull(requirements.deletedAt), eq(requirements.isActive, true)));
   }
 
   async getRequirementById(id: number): Promise<Requirement | undefined> {
