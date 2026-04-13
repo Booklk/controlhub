@@ -208,8 +208,8 @@ export default function CommitteePortal() {
       setNewDecision({ title: '', description: '', type: '' });
       setDecisionAttachments([]);
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء إنشاء القرار', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -232,18 +232,19 @@ export default function CommitteePortal() {
 
   const voteMutation = useMutation({
     mutationFn: async ({ decisionId, vote }: { decisionId: number; vote: 'approve' | 'reject' }) => {
-      return apiRequest('POST', `/api/committee/decisions/${decisionId}/vote`, { vote });
+      const res = await apiRequest('POST', `/api/committee/decisions/${decisionId}/vote`, { vote });
+      return res.json();
     },
     onSuccess: (_, variables) => {
-      toast({ 
+      toast({
         title: variables.vote === 'approve' ? 'تم التصويت بالموافقة' : 'تم التصويت بالرفض',
         description: 'تم تسجيل صوتك بنجاح'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/committee'] });
     },
-    onError: (err: any) => {
-      const msg = err?.message || 'حدث خطأ أثناء التصويت';
+    onError: (error: Error) => {
+      const msg = error.message || 'حدث خطأ أثناء التصويت';
       toast({ title: 'خطأ', description: msg.includes('مسبقاً') ? 'لقد قمت بالتصويت مسبقاً' : msg, variant: 'destructive' });
     },
   });

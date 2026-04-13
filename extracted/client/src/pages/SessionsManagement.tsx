@@ -49,29 +49,29 @@ export default function SessionsManagement() {
 
   const terminateSessionMutation = useMutation({
     mutationFn: async (sessionId: number) => {
-      const response = await apiRequest('DELETE', `/api/sessions/${sessionId}`);
-      return response.json();
+      const res = await apiRequest('DELETE', `/api/sessions/${sessionId}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       toast({ title: 'تم إنهاء الجلسة بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const terminateAllMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('DELETE', '/api/sessions/terminate-all');
-      return response.json();
+      const res = await apiRequest('DELETE', '/api/sessions/terminate-all');
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       toast({ title: 'تم إنهاء جميع الجلسات بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
