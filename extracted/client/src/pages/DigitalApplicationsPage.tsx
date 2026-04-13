@@ -59,41 +59,49 @@ export default function DigitalApplicationsPage() {
   const { data: apps = [], isLoading } = useQuery<any[]>({ queryKey: ["/api/digital-applications"] });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/digital-applications", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/digital-applications", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/digital-applications"] });
       invalidateRelatedQueries('/api/digital-applications');
       setIsDialogOpen(false);
       toast({ title: "تم إضافة التطبيق بنجاح" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في إضافة التطبيق', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest("PUT", `/api/digital-applications/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/digital-applications/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/digital-applications"] });
       invalidateRelatedQueries('/api/digital-applications');
       setIsDialogOpen(false);
       toast({ title: "تم تحديث التطبيق بنجاح" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في تحديث التطبيق', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/digital-applications/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/digital-applications/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/digital-applications"] });
       invalidateRelatedQueries('/api/digital-applications');
       toast({ title: "تم حذف التطبيق" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في حذف التطبيق', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 

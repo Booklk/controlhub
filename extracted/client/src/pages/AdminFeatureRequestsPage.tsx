@@ -105,22 +105,23 @@ export default function AdminFeatureRequestsPage() {
       toast({ title: 'تم تحديث الطلب بنجاح' });
       setSelectedRequest(null);
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء تحديث الطلب', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/feature-requests/${id}`);
+      const res = await apiRequest('DELETE', `/api/feature-requests/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/feature-requests'] });
       toast({ title: 'تم حذف الطلب بنجاح' });
       setDeleteId(null);
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء حذف الطلب', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 

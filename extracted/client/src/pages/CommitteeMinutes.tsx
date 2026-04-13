@@ -116,7 +116,8 @@ export default function CommitteeMinutes() {
 
   const createMinuteMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('POST', '/api/meeting-minutes', data);
+      const res = await apiRequest('POST', '/api/meeting-minutes', data);
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم إنشاء المحاضر بنجاح', description: 'تمت إضافة محاضر الجلسة الجديدة' });
@@ -124,14 +125,15 @@ export default function CommitteeMinutes() {
       setNewMinute({ title: '', content: '', meetingId: '', attendeesText: '', decisionsText: '' });
       queryClient.invalidateQueries({ queryKey: ['/api/meeting-minutes'] });
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء إنشاء المحاضر', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const updateMinuteMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return apiRequest('PUT', `/api/meeting-minutes/${id}`, data);
+      const res = await apiRequest('PUT', `/api/meeting-minutes/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم تحديث المحاضر بنجاح' });
@@ -139,21 +141,22 @@ export default function CommitteeMinutes() {
       setIsEditDialogOpen(false);
       setEditingMinute(null);
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء تحديث المحاضر', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteMinuteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/meeting-minutes/${id}`);
+      const res = await apiRequest('DELETE', `/api/meeting-minutes/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: 'تم حذف المحاضر بنجاح' });
       queryClient.invalidateQueries({ queryKey: ['/api/meeting-minutes'] });
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء حذف المحاضر', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 

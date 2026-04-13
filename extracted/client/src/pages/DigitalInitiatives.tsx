@@ -74,7 +74,10 @@ export default function DigitalInitiatives() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/digital-initiatives", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/digital-initiatives", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/digital-initiatives"] });
       invalidateRelatedQueries('/api/digital-initiatives');
@@ -82,14 +85,16 @@ export default function DigitalInitiatives() {
       resetForm();
       toast({ title: "تم إنشاء المبادرة بنجاح" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في إنشاء المبادرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest("PUT", `/api/digital-initiatives/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/digital-initiatives/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/digital-initiatives"] });
       invalidateRelatedQueries('/api/digital-initiatives');
@@ -98,20 +103,23 @@ export default function DigitalInitiatives() {
       resetForm();
       toast({ title: "تم تحديث المبادرة بنجاح" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في تحديث المبادرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/digital-initiatives/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/digital-initiatives/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/digital-initiatives"] });
       invalidateRelatedQueries('/api/digital-initiatives');
       toast({ title: "تم حذف المبادرة بنجاح" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في حذف المبادرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 

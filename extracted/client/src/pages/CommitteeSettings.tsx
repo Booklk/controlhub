@@ -72,7 +72,7 @@ export default function CommitteeSettings() {
  mutationFn: async () => {
  setCurrentStep("save");
  await new Promise(resolve => setTimeout(resolve, 1000));
- return apiRequest('POST', '/api/committee-settings', {
+ const res = await apiRequest('POST', '/api/committee-settings', {
  votingQuorum,
  approvalsRequired,
  meetingNotifications,
@@ -83,12 +83,13 @@ export default function CommitteeSettings() {
  memberRoleManagement,
  rolePermissions,
  });
+ return res.json();
  },
  onSuccess: () => {
  setCurrentStep("activate");
  setTimeout(() => {
- toast({ 
- title: 'تم الحفظ بنجاح', 
+ toast({
+ title: 'تم الحفظ بنجاح',
  description: 'تم حفظ إعدادات اللجنة بنجاح وتفعيلها',
  duration: 3000
  });
@@ -96,11 +97,11 @@ export default function CommitteeSettings() {
  queryClient.invalidateQueries({ queryKey: ['/api/committee-settings'] });
  }, 800);
  },
- onError: () => {
- toast({ 
- title: 'خطأ', 
- description: 'حدث خطأ أثناء حفظ الإعدادات',
- variant: 'destructive' 
+ onError: (error: Error) => {
+ toast({
+ title: 'خطأ',
+ description: error.message,
+ variant: 'destructive'
  });
  setCurrentStep("configure");
  },

@@ -109,18 +109,24 @@ export default function ActiveDirectoryPage({ navGroups }: Props) {
   }, [configData, configLoaded]);
 
   const saveMutation = useMutation({
-    mutationFn: (body: AdConfig) => apiRequest('POST', '/api/support/ad/config', body),
+    mutationFn: async (body: AdConfig) => {
+      const res = await apiRequest('POST', '/api/support/ad/config', body);
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: 'تم الحفظ', description: 'تم حفظ إعدادات Active Directory بنجاح' });
       queryClient.invalidateQueries({ queryKey: ['/api/support/ad/config'] });
     },
-    onError: (e: any) => {
-      toast({ title: 'خطأ في الحفظ', description: e.message, variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 
   const syncMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/support/ad/sync', {}),
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/support/ad/sync', {});
+      return res.json();
+    },
     onSuccess: (data: any) => {
       if (data.success) {
         toast({
@@ -131,8 +137,8 @@ export default function ActiveDirectoryPage({ navGroups }: Props) {
         toast({ title: 'فشل المزامنة', description: data.errors?.join(', ') || 'خطأ غير معروف', variant: 'destructive' });
       }
     },
-    onError: (e: any) => {
-      toast({ title: 'خطأ في المزامنة', description: e.message, variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 

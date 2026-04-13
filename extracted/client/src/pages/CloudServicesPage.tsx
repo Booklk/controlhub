@@ -63,41 +63,49 @@ export default function CloudServicesPage() {
   const { data: services = [], isLoading } = useQuery<any[]>({ queryKey: ["/api/cloud-services"] });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/cloud-services", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/cloud-services", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cloud-services"] });
       invalidateRelatedQueries('/api/cloud-services');
       setIsDialogOpen(false);
       toast({ title: "تم إضافة الخدمة السحابية بنجاح" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest("PUT", `/api/cloud-services/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/cloud-services/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cloud-services"] });
       invalidateRelatedQueries('/api/cloud-services');
       setIsDialogOpen(false);
       toast({ title: "تم تحديث الخدمة السحابية" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/cloud-services/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/cloud-services/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cloud-services"] });
       invalidateRelatedQueries('/api/cloud-services');
       toast({ title: "تم حذف الخدمة السحابية" });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
 
