@@ -30,7 +30,7 @@ export function registerTaskRoutes(app: Express) {
       const deptId = req.query.departmentId ? parseInt(req.query.departmentId as string) : null;
       const userDeptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || null;
       const isPrivileged = req.user?.role === 'system_admin' || req.user?.role === 'it_director';
-      const targetDeptId = isPrivileged ? (deptId || userDeptId) : userDeptId;
+      const targetDeptId = isPrivileged ? (deptId || userDeptId) : (userDeptId || deptId);
 
       const selectFields = {
         id: users.id,
@@ -632,9 +632,21 @@ export function registerTaskRoutes(app: Express) {
     try {
       const deptId = parseInt(req.params.deptId);
       if (isNaN(deptId)) return res.json([]);
+      const portalNames = DEPT_ID_TO_PORTALS[deptId] || [];
+      const conditions = [
+        eq(users.isActive, true),
+        isNull(users.deletedAt),
+      ];
+      if (portalNames.length > 0) {
+        conditions.push(
+          sql`(${users.itDepartmentId} = ${deptId} OR (${users.itDepartmentId} IS NULL AND ${users.portal} IN (${sql.join(portalNames.map(p => sql`${p}`), sql`, `)})))`
+        );
+      } else {
+        conditions.push(eq(users.itDepartmentId, deptId));
+      }
       const result = await db.select({ id: users.id, name: users.name, email: users.email, role: users.role, jobTitle: users.jobTitle })
         .from(users)
-        .where(and(eq(users.itDepartmentId, deptId), eq(users.isActive, true), isNull(users.deletedAt)));
+        .where(and(...conditions));
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ error: 'حدث خطأ في جلب المستخدمين' });

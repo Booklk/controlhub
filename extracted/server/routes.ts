@@ -3060,7 +3060,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         'it_cybersecurity_manager': { role: 'it_cybersecurity_staff', portal: 'cybersecurity', itDeptId: 10, jobTitle: 'موظف إدارة الأمن السيبراني' },
         'it_digital_manager': { role: 'it_digital_staff', portal: 'digital_transformation', itDeptId: 11, jobTitle: 'موظف إدارة التحول الرقمي' },
         'it_support_manager': { role: 'it_support_staff', portal: 'support', itDeptId: 12, jobTitle: 'موظف إدارة الدعم الفني' },
-        'dmo_manager': { role: 'dmo_staff', portal: 'dmo', itDeptId: null, jobTitle: 'موظف مكتب إدارة البيانات' },
+        'dmo_manager': { role: 'dmo_staff', portal: 'dmo', itDeptId: 5, jobTitle: 'موظف مكتب إدارة البيانات' },
         'it_director': { role: 'it_infrastructure_staff', portal: 'infrastructure', itDeptId: 9, jobTitle: 'موظف تقنية المعلومات' },
         'system_admin': { role: 'it_infrastructure_staff', portal: 'infrastructure', itDeptId: 9, jobTitle: 'موظف تقنية المعلومات' },
       };
@@ -3133,13 +3133,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         'it_cybersecurity_manager': 10, 'it_cybersecurity_staff': 10,
         'it_digital_manager': 11, 'it_digital_staff': 11,
         'it_support_manager': 12, 'it_support_staff': 12,
+        'dmo_manager': 5, 'dmo_staff': 5,
         'it_director': 9, 'system_admin': 9,
       };
       const DEPT_TO_ROLE: Record<number, string> = {
+        5: 'dmo_staff',
         9: 'it_infrastructure_staff', 10: 'it_cybersecurity_staff',
         11: 'it_digital_staff', 12: 'it_support_staff',
       };
-      const deptPortalMap: Record<number, string> = { 9: 'infrastructure', 10: 'cybersecurity', 11: 'digital_transformation', 12: 'support' };
+      const deptPortalMap: Record<number, string> = { 5: 'dmo', 9: 'infrastructure', 10: 'cybersecurity', 11: 'digital_transformation', 12: 'support' };
 
       const managerRole = req.user?.role || '';
       const managerDeptId = ROLE_TO_DEPT[managerRole] || null;
@@ -11126,11 +11128,30 @@ function registerMissingWorkflowRoutes(app: Express) {
   });
 
   // ==================== قائمة المستخدمين المبسطة للقوائم المنسدلة ====================
+  // NOTE: This is a fallback handler; the primary handler is in tasks.routes.ts (registered earlier).
   app.get("/api/department-users", authenticateToken, async (req: any, res: any) => {
     try {
+      const DEPT_PORTALS: Record<number, string[]> = {
+        5: ['dmo'], 9: ['infrastructure'], 10: ['cybersecurity'],
+        11: ['digital_transformation'], 12: ['support'],
+      };
+      const deptId = req.query.departmentId ? parseInt(req.query.departmentId as string) : null;
       const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
-      if (!userDeptId) {
+      const targetDeptId = userDeptId || deptId;
+      if (!targetDeptId) {
         return res.json([]);
+      }
+      const portalNames = DEPT_PORTALS[targetDeptId] || [];
+      const conditions = [
+        eq(users.isActive, true),
+        isNull(users.deletedAt),
+      ];
+      if (portalNames.length > 0) {
+        conditions.push(
+          sql`(${users.itDepartmentId} = ${targetDeptId} OR (${users.itDepartmentId} IS NULL AND ${users.portal} IN (${sql.join(portalNames.map(p => sql`${p}`), sql`, `)})))`
+        );
+      } else {
+        conditions.push(eq(users.itDepartmentId, targetDeptId));
       }
       const deptUsers = await db.select({
         id: users.id,
@@ -11139,11 +11160,7 @@ function registerMissingWorkflowRoutes(app: Express) {
         email: users.email,
         role: users.role,
         jobTitle: users.jobTitle,
-      }).from(users).where(and(
-        eq(users.itDepartmentId, userDeptId),
-        eq(users.isActive, true),
-        isNull(users.deletedAt)
-      ));
+      }).from(users).where(and(...conditions));
       res.json(deptUsers);
     } catch (error) {
       logger.error('Error fetching department users:', { error });
@@ -11157,18 +11174,31 @@ function registerMissingWorkflowRoutes(app: Express) {
       if (!deptId) {
         return res.json([]);
       }
-      const deptUsers = await db.select({
+      const DEPT_PORTALS: Record<number, string[]> = {
+        5: ['dmo'], 9: ['infrastructure'], 10: ['cybersecurity'],
+        11: ['digital_transformation'], 12: ['support'],
+      };
+      const portalNames = DEPT_PORTALS[deptId] || [];
+      const selectFields = {
         id: users.id,
         name: users.name,
         nameEn: users.nameEn,
         email: users.email,
         role: users.role,
         jobTitle: users.jobTitle,
-      }).from(users).where(and(
-        eq(users.itDepartmentId, deptId),
+      };
+      const conditions = [
         eq(users.isActive, true),
-        isNull(users.deletedAt)
-      ));
+        isNull(users.deletedAt),
+      ];
+      if (portalNames.length > 0) {
+        conditions.push(
+          sql`(${users.itDepartmentId} = ${deptId} OR (${users.itDepartmentId} IS NULL AND ${users.portal} IN (${sql.join(portalNames.map(p => sql`${p}`), sql`, `)})))`
+        );
+      } else {
+        conditions.push(eq(users.itDepartmentId, deptId));
+      }
+      const deptUsers = await db.select(selectFields).from(users).where(and(...conditions));
       res.json(deptUsers);
     } catch (error) {
       logger.error('Error fetching users by department:', { error });
