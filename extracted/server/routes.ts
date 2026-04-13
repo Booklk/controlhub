@@ -9,7 +9,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { db } from "./db";
-import { sessions, externalSystems, systemHealthLogs, auditLogs, vendors, slaAgreements, slaBreaches, knowledgeBase, documents, dmoRequests, dmoRequestResponses, users, itProjects, itTickets, tasks, votingSessions, decisionVotes, committeeMembers, meetingMinutes, committeeDecisions, committeeMeetings, meetingAttendance, infrastructureServers, infrastructureNetworks, infrastructureStorage, infrastructureMonitoring, itReferrals, itReferralHistory, digitalInitiatives, digitalApplications, cloudServices, customerSatisfaction, securityRiskAssessments, securityVulnerabilities, securityThreats, securityIncidents, departmentTasks, systemPerformanceMetrics, itAssets, kpiMetrics, databaseConnections, discoveredTables, dataFlowMappings, dataAssets, emailIntegrationKeys, notifications, escalations, featureRequests, regulatoryControls, plannerBoards, plannerBuckets, plannerTasks, plannerComments, dataSubjectRequests, dsrSystemActions, consentRecords, privacyNotices, processingRecords, dataBreaches, dataRisks, dataDictionary, dataLineage, complianceReports, ndmoAssessments, dataAgreements, discoveredColumns, discoveredSchemas, discoveryLogs, systemConnections, userBookmarks, quickNotes, alertRules, ticketTemplates, automationRules, externalDataSharingRequests, evidences, committeeTasks, trainingCourses, requirements as requirementsTable } from "@shared/schema";
+import { sessions, externalSystems, systemHealthLogs, auditLogs, vendors, slaAgreements, slaBreaches, knowledgeBase, documents, dmoRequests, dmoRequestResponses, users, itProjects, itTickets, tasks, votingSessions, decisionVotes, committeeMembers, meetingMinutes, committeeDecisions, committeeMeetings, meetingAttendance, infrastructureServers, infrastructureNetworks, infrastructureStorage, infrastructureMonitoring, itReferrals, itReferralHistory, digitalInitiatives, digitalApplications, cloudServices, customerSatisfaction, securityRiskAssessments, securityVulnerabilities, securityThreats, securityIncidents, departmentTasks, systemPerformanceMetrics, itAssets, kpiMetrics, databaseConnections, discoveredTables, dataFlowMappings, dataAssets, emailIntegrationKeys, notifications, escalations, featureRequests, regulatoryControls, plannerBoards, plannerBuckets, plannerTasks, plannerComments, dataSubjectRequests, dsrSystemActions, consentRecords, privacyNotices, processingRecords, dataBreaches, dataRisks, dataDictionary, dataLineage, complianceReports, ndmoAssessments, dataAgreements, discoveredColumns, discoveredSchemas, discoveryLogs, systemConnections, userBookmarks, quickNotes, alertRules, ticketTemplates, automationRules, externalDataSharingRequests, evidences, committeeTasks, trainingCourses, domains, requirements as requirementsTable } from "@shared/schema";
 import { eq, sql, and, or, ne, isNull, isNotNull, not, inArray, notInArray, desc, gte, ilike } from "drizzle-orm";
 import { PROJECT_STATUSES, PROJECT_STATUS_TRANSITIONS, getSlaDeadline, getSlaHours, SLA_HOURS, isValidTransition, getAllowedTransitions, getTransitionReason, getTransitionMap, REFERRAL_STATUS_TRANSITIONS, TICKET_TRANSITION_REASONS, TASK_TRANSITION_REASONS, PROJECT_TRANSITION_REASONS, REFERRAL_TRANSITION_REASONS, DECISION_TRANSITION_REASONS, type WorkflowEntity } from "@shared/constants";
 import multer from "multer";
@@ -711,9 +711,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           { code: 'DG15', nameAr: 'أخلاقيات البيانات', icon: 'Scale', color: '#3d5a80', sortOrder: 14 },
         ];
         for (const d of ndmoDomains) {
-          await db.insert(domains).values({ ...d, isActive: true }).onConflictDoNothing();
+          await db.insert(domains).values({ ...d, isActive: true })
+            .onConflictDoUpdate({ target: domains.code, set: { isActive: true, nameAr: d.nameAr, icon: d.icon, color: d.color, sortOrder: d.sortOrder } });
         }
-        logger.info('[Domains] Auto-seeded 15 NDMO domains');
+        logger.info('[Domains] Auto-seeded/activated 15 NDMO domains');
         result = await storage.getDomains();
       }
       res.json(result);
