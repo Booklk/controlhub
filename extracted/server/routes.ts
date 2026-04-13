@@ -691,35 +691,49 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   
   app.get("/api/domains", authenticateToken, async (req, res) => {
     try {
-      let result = await storage.getDomains();
-      if (result.length === 0) {
-        const ndmoDomains = [
-          { code: 'DG01', nameAr: 'حوكمة البيانات', icon: 'Database', color: '#1e3a5f', sortOrder: 0 },
-          { code: 'DG02', nameAr: 'جودة البيانات', icon: 'CheckCircle', color: '#1e3a5f', sortOrder: 1 },
-          { code: 'DG03', nameAr: 'إدارة البيانات الرئيسية والمرجعية', icon: 'BookOpen', color: '#1e3a5f', sortOrder: 2 },
-          { code: 'DG04', nameAr: 'هندسة البيانات', icon: 'Layers', color: '#1e3a5f', sortOrder: 3 },
-          { code: 'DG05', nameAr: 'تخزين البيانات وإدارة العمليات', icon: 'HardDrive', color: '#1e3a5f', sortOrder: 4 },
-          { code: 'DG06', nameAr: 'أمن البيانات', icon: 'Shield', color: '#c9a227', sortOrder: 5 },
-          { code: 'DG07', nameAr: 'تكامل البيانات وقابلية التشغيل البيني', icon: 'GitMerge', color: '#1e3a5f', sortOrder: 6 },
-          { code: 'DG08', nameAr: 'إدارة المحتوى والوثائق', icon: 'FileText', color: '#1e3a5f', sortOrder: 7 },
-          { code: 'DG09', nameAr: 'البيانات المفتوحة', icon: 'Globe', color: '#2d4a6f', sortOrder: 8 },
-          { code: 'DG10', nameAr: 'تحليل البيانات وذكاء الأعمال', icon: 'BarChart', color: '#2d4a6f', sortOrder: 9 },
-          { code: 'DG11', nameAr: 'الذكاء الاصطناعي وتعلم الآلة', icon: 'Brain', color: '#6366f1', sortOrder: 10 },
-          { code: 'DG12', nameAr: 'إدارة البيانات الضخمة', icon: 'Database', color: '#2d4a6f', sortOrder: 11 },
-          { code: 'DG13', nameAr: 'خصوصية البيانات', icon: 'Lock', color: '#c9a227', sortOrder: 12 },
-          { code: 'DG14', nameAr: 'إدارة دورة حياة البيانات', icon: 'RefreshCw', color: '#1e3a5f', sortOrder: 13 },
-          { code: 'DG15', nameAr: 'أخلاقيات البيانات', icon: 'Scale', color: '#3d5a80', sortOrder: 14 },
-        ];
-        for (const d of ndmoDomains) {
-          await db.insert(domains).values({ ...d, isActive: true })
-            .onConflictDoUpdate({ target: domains.code, set: { isActive: true, nameAr: d.nameAr, icon: d.icon, color: d.color, sortOrder: d.sortOrder } });
+      const NDMO_DOMAINS = [
+        { code: 'DG01', nameAr: 'حوكمة البيانات', icon: 'Database', color: '#1e3a5f', sortOrder: 0 },
+        { code: 'DG02', nameAr: 'جودة البيانات', icon: 'CheckCircle', color: '#1e3a5f', sortOrder: 1 },
+        { code: 'DG03', nameAr: 'إدارة البيانات الرئيسية والمرجعية', icon: 'BookOpen', color: '#1e3a5f', sortOrder: 2 },
+        { code: 'DG04', nameAr: 'هندسة البيانات', icon: 'Layers', color: '#1e3a5f', sortOrder: 3 },
+        { code: 'DG05', nameAr: 'تخزين البيانات وإدارة العمليات', icon: 'HardDrive', color: '#1e3a5f', sortOrder: 4 },
+        { code: 'DG06', nameAr: 'أمن البيانات', icon: 'Shield', color: '#c9a227', sortOrder: 5 },
+        { code: 'DG07', nameAr: 'تكامل البيانات وقابلية التشغيل البيني', icon: 'GitMerge', color: '#1e3a5f', sortOrder: 6 },
+        { code: 'DG08', nameAr: 'إدارة المحتوى والوثائق', icon: 'FileText', color: '#1e3a5f', sortOrder: 7 },
+        { code: 'DG09', nameAr: 'البيانات المفتوحة', icon: 'Globe', color: '#2d4a6f', sortOrder: 8 },
+        { code: 'DG10', nameAr: 'تحليل البيانات وذكاء الأعمال', icon: 'BarChart', color: '#2d4a6f', sortOrder: 9 },
+        { code: 'DG11', nameAr: 'الذكاء الاصطناعي وتعلم الآلة', icon: 'Brain', color: '#6366f1', sortOrder: 10 },
+        { code: 'DG12', nameAr: 'إدارة البيانات الضخمة', icon: 'Database', color: '#2d4a6f', sortOrder: 11 },
+        { code: 'DG13', nameAr: 'خصوصية البيانات', icon: 'Lock', color: '#c9a227', sortOrder: 12 },
+        { code: 'DG14', nameAr: 'إدارة دورة حياة البيانات', icon: 'RefreshCw', color: '#1e3a5f', sortOrder: 13 },
+        { code: 'DG15', nameAr: 'أخلاقيات البيانات', icon: 'Scale', color: '#3d5a80', sortOrder: 14 },
+      ];
+
+      // Always ensure domains exist and are active
+      const [existingCount] = await db.execute(sql`SELECT COUNT(*)::int as cnt FROM domains WHERE is_active = true`);
+      const activeCount = Number((existingCount as any).rows?.[0]?.cnt || (existingCount as any)[0]?.cnt || 0);
+
+      if (activeCount < 15) {
+        // First: activate any existing inactive domains
+        await db.execute(sql`UPDATE domains SET is_active = true WHERE is_active = false OR is_active IS NULL`);
+
+        // Then: insert any missing domains
+        for (const d of NDMO_DOMAINS) {
+          await db.execute(sql`
+            INSERT INTO domains (code, name_ar, icon, color, sort_order, is_active, created_at, updated_at)
+            VALUES (${d.code}, ${d.nameAr}, ${d.icon}, ${d.color}, ${d.sortOrder}, true, NOW(), NOW())
+            ON CONFLICT (code) DO UPDATE SET is_active = true, name_ar = ${d.nameAr}, icon = ${d.icon}, color = ${d.color}, sort_order = ${d.sortOrder}
+          `);
         }
-        logger.info('[Domains] Auto-seeded/activated 15 NDMO domains');
-        result = await storage.getDomains();
+        logger.info('[Domains] Ensured 15 NDMO domains are active');
       }
-      res.json(result);
+
+      const result = await db.execute(sql`SELECT * FROM domains WHERE is_active = true ORDER BY sort_order ASC`);
+      const rows = (result as any).rows || result;
+      res.json(rows);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      logger.error('[Domains] Error:', { error: (error as Error).message });
+      res.status(500).json({ error: 'حدث خطأ في جلب النطاقات' });
     }
   });
 
