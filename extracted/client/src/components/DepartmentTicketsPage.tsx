@@ -723,7 +723,7 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
               <Button className="w-full hub-btn-gold" disabled={!commentText.trim()}
                 onClick={async () => {
                   try {
-                    await apiRequest('POST', `/api/it-tickets/${commentTicket.id}/comments`, { content: commentText });
+                    await apiRequest('POST', `/api/tickets/${commentTicket.id}/comments`, { content: commentText });
                     toast({ title: 'تم إضافة التعليق بنجاح' });
                     setCommentTicket(null); setCommentText('');
                   } catch { toast({ title: 'خطأ', description: 'فشل في إضافة التعليق', variant: 'destructive' }); setCommentTicket(null); setCommentText(''); }

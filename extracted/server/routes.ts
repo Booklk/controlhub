@@ -878,8 +878,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
+      const parsedReqId = parseInt(requirementId);
+      if (isNaN(parsedReqId)) {
+        return res.status(400).json({ error: 'معرف المتطلب غير صالح' });
+      }
       const evidence = await storage.createEvidence({
-        requirementId: parseInt(requirementId),
+        requirementId: parsedReqId,
         title,
         description: description || null,
         departmentId: departmentId ? parseInt(departmentId) : null,
@@ -4062,12 +4066,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!title || !serviceType || !targetValue || !targetUnit) {
         return res.status(400).json({ error: 'العنوان ونوع الخدمة والقيمة المستهدفة ووحدة القياس مطلوبة' });
       }
-      if (!vendorId) {
+      const parsedVendorId = parseInt(vendorId);
+      if (!vendorId || isNaN(parsedVendorId)) {
         return res.status(400).json({ error: 'يجب تحديد المورد المرتبط باتفاقية SLA' });
       }
+      const parsedSystemId = systemId ? parseInt(systemId) : null;
+      const parsedProjectId = projectId ? parseInt(projectId) : null;
       const [result] = await db.insert(slaAgreements).values({
-        title, vendorId: parseInt(vendorId), systemId: systemId ? parseInt(systemId) : null,
-        projectId: projectId ? parseInt(projectId) : null,
+        title, vendorId: parsedVendorId, systemId: parsedSystemId && !isNaN(parsedSystemId) ? parsedSystemId : null,
+        projectId: parsedProjectId && !isNaN(parsedProjectId) ? parsedProjectId : null,
         description: description || null, serviceType, targetValue: String(targetValue),
         targetUnit, currentValue: currentValue ? String(currentValue) : null,
         measurementPeriod: measurementPeriod || null,
