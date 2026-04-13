@@ -390,9 +390,48 @@ export default function ITDepartmentDigitalTransformation() {
                       style={{ width: `${dashboardData.tasks.total > 0 ? Math.round((dashboardData.tasks.pending / dashboardData.tasks.total) * 100) : 0}%` }} />
                   </div>
                   <p className="text-[10px] text-muted-foreground/50 mt-1">{dashboardData.tasks.total > 0 ? Math.round((dashboardData.tasks.pending / dashboardData.tasks.total) * 100) : 0}% من {dashboardData.tasks.total} مهمة</p>
+                  {(dashboardData.tasks.completionRate ?? 0) > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border/20">
+                      <div className="flex justify-between text-[10px] text-muted-foreground/50 mb-1">
+                        <span>معدل الإنجاز</span>
+                        <span>{dashboardData.tasks.completionRate}%</span>
+                      </div>
+                      <Progress value={dashboardData.tasks.completionRate ?? 0} className="h-1" data-testid="progress-task-completion" />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
+
+            {(dashboardData.staff?.total || dashboardData.referrals?.total) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {dashboardData.staff && dashboardData.staff.total > 0 && (
+                  <Card className="hub-card hub-card-hover relative overflow-hidden" data-testid="card-staff-total">
+                    <div className="absolute inset-y-0 right-0 w-[3px] bg-primary/30" />
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <p className="text-xs text-muted-foreground font-medium">عدد الموظفين</p>
+                        <div className="p-2 bg-primary/10 rounded-lg"><Users className="w-4 h-4 text-foreground" /></div>
+                      </div>
+                      <p className="text-3xl font-bold hub-stat-number text-foreground">{dashboardData.staff.total}</p>
+                    </CardContent>
+                  </Card>
+                )}
+                {dashboardData.referrals && dashboardData.referrals.total > 0 && (
+                  <Card className="hub-card hub-card-hover relative overflow-hidden" data-testid="card-referrals">
+                    <div className="absolute inset-y-0 right-0 w-[3px] bg-amber-400/70" />
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <p className="text-xs text-muted-foreground font-medium">الإحالات</p>
+                        <div className="p-2 bg-amber-400/15 rounded-lg"><Globe className="w-4 h-4 hub-stat-gold" /></div>
+                      </div>
+                      <p className="text-3xl font-bold hub-stat-number hub-stat-gold">{dashboardData.referrals.total}</p>
+                      <p className="text-[10px] text-muted-foreground/50 mt-1">{dashboardData.referrals.active} نشطة</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -465,11 +504,11 @@ export default function ITDepartmentDigitalTransformation() {
                   </div>
                   <p className="text-3xl font-bold hub-stat-number text-violet-400">{stats.cloudServices}</p>
                   <div className="mt-3 h-1.5 bg-border/30 rounded-full overflow-hidden">
-                    {/* البار = cloudUsagePercent (نسبة النشطة من الكل، محسوب من externalSystems) */}
+                    {/* البار = cloudUsagePercent (نسبة النشطة من الكل) */}
                     <div className="h-full bg-violet-400 rounded-full transition-all duration-700"
                       style={{ width: `${stats.cloudUsagePercent}%` }} />
                   </div>
-                  <p className="text-[10px] text-muted-foreground/50 mt-1">نشطة: {stats.cloudUsagePercent}%</p>
+                  <p className="text-[10px] text-muted-foreground/50 mt-1">{cloudActiveCount} نشطة · {stats.cloudUsagePercent}%</p>
                 </CardContent>
               </Card>
             </>
