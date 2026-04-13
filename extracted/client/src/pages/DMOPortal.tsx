@@ -135,6 +135,7 @@ export default function DMOPortal() {
   const [dictionarySearch, setDictionarySearch] = useState("");
   const [archiveSearch, setArchiveSearch] = useState("");
   const [isAddRequirementOpen, setIsAddRequirementOpen] = useState(false);
+  const [isAddEvidenceRequirementOpen, setIsAddEvidenceRequirementOpen] = useState(false);
   const [requirementForm, setRequirementForm] = useState({ domainId: '', code: '', titleAr: '', titleEn: '', description: '', priority: 'medium', complianceLevel: 'mandatory', evidenceType: 'document' });
   const [isAddFlowMappingOpen, setIsAddFlowMappingOpen] = useState(false);
   const [flowMappingForm, setFlowMappingForm] = useState({ sourceSystem: '', targetSystem: '', dataCategory: '', transferMethod: '', frequency: 'daily', sensitivity: 'internal', purpose: '', legalBasis: '' });
@@ -248,6 +249,11 @@ export default function DMOPortal() {
 
   const { data: dsrStats } = useQuery<any>({
     queryKey: ['/api/dsr/stats/overview'],
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: dmoStats } = useQuery<any>({
+    queryKey: ['/api/dashboard/dmo'],
     staleTime: 2 * 60 * 1000,
   });
 
@@ -1168,16 +1174,64 @@ export default function DMOPortal() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">نسبة الامتثال</p>
-                <AnimatedNumber value={stats.complianceRate} suffix="%" className="text-3xl font-bold hub-stat-gold" />
+                <AnimatedNumber value={dmoStats?.compliance?.requirements?.coverageRate ?? stats.complianceRate} suffix="%" className="text-3xl font-bold hub-stat-gold" />
               </div>
               <div className="hub-icon-gold">
                 <Target className="w-6 h-6 hub-stat-gold" />
               </div>
             </div>
-            <Progress value={stats.complianceRate} className="mt-3 h-2" />
+            <Progress value={dmoStats?.compliance?.requirements?.coverageRate ?? stats.complianceRate} className="mt-3 h-2" />
           </CardContent>
         </Card>
 
+        <Card className="card-premium">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">اكتمال الأدلة</p>
+                <AnimatedNumber value={dmoStats?.compliance?.evidences?.completionRate ?? (stats.totalEvidences > 0 ? Math.round((stats.approvedEvidences / stats.totalEvidences) * 100) : 0)} suffix="%" className="text-3xl font-bold hub-stat-gold" />
+              </div>
+              <div className="hub-icon-gold">
+                <FolderOpen className="w-6 h-6 hub-stat-gold" />
+              </div>
+            </div>
+            <Progress value={dmoStats?.compliance?.evidences?.completionRate ?? (stats.totalEvidences > 0 ? Math.round((stats.approvedEvidences / stats.totalEvidences) * 100) : 0)} className="mt-3 h-2" />
+          </CardContent>
+        </Card>
+
+        <Card className="card-premium">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">تقييم NDMO</p>
+                <AnimatedNumber value={dmoStats?.compliance?.ndmo?.avgScore ?? stats.complianceRate} suffix="%" className="text-3xl font-bold hub-stat-gold" />
+              </div>
+              <div className="hub-icon-gold">
+                <Award className="w-6 h-6 hub-stat-gold" />
+              </div>
+            </div>
+            <Progress value={dmoStats?.compliance?.ndmo?.avgScore ?? stats.complianceRate} className="mt-3 h-2" />
+          </CardContent>
+        </Card>
+
+        <Card className="card-premium">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">الأصول الرقمية</p>
+                <AnimatedNumber value={dmoStats?.dataGovernance?.assets?.total ?? dataAssetsList.length} className="text-3xl font-bold" />
+              </div>
+              <div className="hub-icon-navy">
+                <Database className="w-6 h-6 text-muted-foreground" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">{stats.totalDomains} نطاق حوكمة</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="card-premium">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -1212,14 +1266,29 @@ export default function DMOPortal() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">الأدلة</p>
-                <p className="text-3xl font-bold">{stats.totalEvidences}</p>
+                <p className="text-sm text-muted-foreground">الانتهاكات النشطة</p>
+                <p className="text-3xl font-bold">{dmoStats?.privacy?.breaches?.active ?? breachesList.filter((b: any) => b.status === 'detected' || b.status === 'investigating').length}</p>
               </div>
-              <div className="hub-icon-gold">
-                <FolderOpen className="w-6 h-6 hub-stat-gold" />
+              <div className="hub-icon-navy">
+                <ShieldAlert className="w-6 h-6 text-muted-foreground" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">{stats.pendingEvidences} بانتظار المراجعة</p>
+            <p className="text-xs text-muted-foreground mt-2">{breachesList.length} إجمالي</p>
+          </CardContent>
+        </Card>
+
+        <Card className="card-premium">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">طلبات DSR معلقة</p>
+                <p className="text-3xl font-bold">{dmoStats?.privacy?.dsr?.pending ?? (dsrList as any[]).filter((r: any) => r.status === 'pending').length}</p>
+              </div>
+              <div className="hub-icon-navy">
+                <FileCheck className="w-6 h-6 text-muted-foreground" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">{(dsrList as any[]).length} إجمالي الطلبات</p>
           </CardContent>
         </Card>
       </div>
@@ -1875,7 +1944,7 @@ export default function DMOPortal() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>إدارة المتطلبات ({requirements.length})</CardTitle>
-            <Button className="btn-gold" size="sm" onClick={() => setIsAddRequirementOpen(true)} data-testid="button-add-requirement-evidence">
+            <Button className="btn-gold" size="sm" onClick={() => setIsAddEvidenceRequirementOpen(true)} data-testid="button-add-requirement-evidence">
               <Plus className="w-4 h-4 ml-2" />
               إضافة متطلب
             </Button>
@@ -1924,7 +1993,7 @@ export default function DMOPortal() {
         </CardContent>
       </Card>
 
-      <Dialog open={isAddRequirementOpen} onOpenChange={setIsAddRequirementOpen}>
+      <Dialog open={isAddEvidenceRequirementOpen} onOpenChange={setIsAddEvidenceRequirementOpen}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>إضافة متطلب امتثال جديد</DialogTitle>
@@ -1998,7 +2067,7 @@ export default function DMOPortal() {
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsAddRequirementOpen(false)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setIsAddEvidenceRequirementOpen(false)}>إلغاء</Button>
             <Button className="btn-gold" disabled={!requirementForm.domainId || !requirementForm.code.trim() || !requirementForm.titleAr.trim() || createRequirementMutation.isPending} onClick={() => createRequirementMutation.mutate({ domainId: Number(requirementForm.domainId), code: requirementForm.code, titleAr: requirementForm.titleAr, titleEn: requirementForm.titleEn || undefined, description: requirementForm.description || undefined, priority: requirementForm.priority, complianceLevel: requirementForm.complianceLevel, evidenceType: requirementForm.evidenceType })} data-testid="button-confirm-requirement-ev">
               {createRequirementMutation.isPending ? 'جاري الإنشاء...' : 'إضافة المتطلب'}
             </Button>

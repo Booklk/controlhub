@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import shieldLogo from "@assets/jcsa-shield-logo.png";
 
 interface Notification {
@@ -57,6 +58,7 @@ export default function SmartNotificationCenter() {
   const [hasNew, setHasNew] = useState(false);
   const [prevCount, setPrevCount] = useState(0);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ['/api/notifications'],
@@ -78,21 +80,25 @@ export default function SmartNotificationCenter() {
   const markReadMutation = useMutation({
     mutationFn: (id: number) => apiRequest('PUT', `/api/notifications/${id}/read`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/notifications'] }),
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: "destructive" }); },
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: () => apiRequest('PUT', '/api/notifications/read-all'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/notifications'] }),
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: "destructive" }); },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiRequest('DELETE', `/api/notifications/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/notifications'] }),
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: "destructive" }); },
   });
 
   const clearAllMutation = useMutation({
     mutationFn: () => apiRequest('DELETE', '/api/notifications/clear-all'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/notifications'] }),
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: "destructive" }); },
   });
 
   const unread = notifications.filter(n => !n.isRead).length;

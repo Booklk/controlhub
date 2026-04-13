@@ -55,9 +55,11 @@ interface InfrastructureDashboard {
   networks: { total: number; active: number };
   storage: { total: number; totalCapacityGB: number; usedCapacityGB: number; usagePercent: number };
   monitoring: { activeAlerts: number; critical: number; warning: number };
-  tickets: { total: number; open: number };
-  projects: { total: number; active: number };
-  tasks: { total: number; pending: number };
+  tickets: { total: number; open: number; resolved?: number; slaBreaches?: number; avgResolutionHours?: number; resolutionRate?: number };
+  projects: { total: number; active: number; completed?: number };
+  tasks: { total: number; pending: number; completed?: number; overdue?: number; completionRate?: number };
+  staff?: { total: number };
+  referrals?: { total: number; active: number };
 }
 
 function StatCardSkeleton() {
@@ -177,9 +179,11 @@ export default function ITDepartmentInfrastructure() {
   const net = dashboardData?.networks ?? { total: 0, active: 0 };
   const stor = dashboardData?.storage ?? { total: 0, totalCapacityGB: 0, usedCapacityGB: 0, usagePercent: 0 };
   const mon = dashboardData?.monitoring ?? { activeAlerts: 0, critical: 0, warning: 0 };
-  const tix = dashboardData?.tickets ?? { total: 0, open: 0 };
-  const proj = dashboardData?.projects ?? { total: 0, active: 0 };
-  const tsk = dashboardData?.tasks ?? { total: 0, pending: 0 };
+  const tix = dashboardData?.tickets ?? { total: 0, open: 0, resolved: 0, slaBreaches: 0, avgResolutionHours: 0, resolutionRate: 0 };
+  const proj = dashboardData?.projects ?? { total: 0, active: 0, completed: 0 };
+  const tsk = dashboardData?.tasks ?? { total: 0, pending: 0, completed: 0, overdue: 0, completionRate: 0 };
+  const staff = dashboardData?.staff ?? { total: 0 };
+  const referrals = dashboardData?.referrals ?? { total: 0, active: 0 };
 
   const handleRefresh = () => {
     refetchDashboard();
@@ -445,6 +449,15 @@ export default function ITDepartmentInfrastructure() {
                       <p className="text-xs text-[hsl(43_74%_49%)]/80 mt-1">تحذير</p>
                     </div>
                   </div>
+                  {(tix.slaBreaches ?? 0) > 0 && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between" data-testid="stat-sla-breaches">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                        <span className="text-sm text-white/60">انتهاكات SLA</span>
+                      </div>
+                      <span className="text-xl font-bold text-red-400">{tix.slaBreaches}</span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -507,7 +520,46 @@ export default function ITDepartmentInfrastructure() {
                       </div>
                     </div>
                     <p className="text-xs text-white/40">من أصل {tsk.total} مهمة</p>
+                    {(tsk.completionRate ?? 0) > 0 && (
+                      <div className="mt-2">
+                        <div className="flex justify-between text-[10px] text-white/40 mb-1">
+                          <span>معدل الإنجاز</span>
+                          <span>{tsk.completionRate}%</span>
+                        </div>
+                        <Progress value={tsk.completionRate ?? 0} className="h-1.5" data-testid="progress-task-completion" />
+                      </div>
+                    )}
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  {staff.total > 0 && (
+                    <div className="p-4 bg-white/5 rounded-lg" data-testid="stat-staff-total">
+                      <div className="flex items-center gap-3">
+                        <div className="hub-icon-gold">
+                          <Monitor className="w-5 h-5 hub-stat-gold" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-white/60">عدد الموظفين</p>
+                          <p className="text-2xl font-bold text-white">{staff.total}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {referrals.total > 0 && (
+                    <div className="p-4 bg-white/5 rounded-lg" data-testid="stat-referrals">
+                      <div className="flex items-center gap-3">
+                        <div className="hub-icon-gold">
+                          <Inbox className="w-5 h-5 hub-stat-gold" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-white/60">الإحالات</p>
+                          <p className="text-2xl font-bold text-white">{referrals.total}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-white/40 mt-1">{referrals.active} نشطة</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

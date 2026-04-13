@@ -101,7 +101,10 @@ export default function ITDepartmentDigitalTransformation() {
     applications: { total: number; active: number };
     tickets: { total: number; open: number };
     projects: { total: number; active: number };
-    tasks: { total: number; pending: number };
+    tasks: { total: number; pending: number; completed?: number; overdue?: number; completionRate?: number };
+    cloud?: { total: number; active: number };
+    staff?: { total: number };
+    referrals?: { total: number; active: number };
   }>({
     queryKey: ['/api/dashboard/digital-transformation'],
     refetchInterval: 2 * 60 * 1000,
@@ -146,9 +149,10 @@ export default function ITDepartmentDigitalTransformation() {
 
   const pendingTasks = incomingTasks.filter((t: any) => t.status === 'pending' || t.status === 'assigned');
 
-  const cloudActiveCount = externalSystems.filter((s: any) => s.status === 'active').length;
-  const cloudUsagePercent = externalSystems.length > 0
-    ? Math.round((cloudActiveCount / externalSystems.length) * 100)
+  const cloudTotal = dashboardData?.cloud?.total ?? externalSystems.length;
+  const cloudActiveCount = dashboardData?.cloud?.active ?? externalSystems.filter((s: any) => s.status === 'active').length;
+  const cloudUsagePercent = cloudTotal > 0
+    ? Math.round((cloudActiveCount / cloudTotal) * 100)
     : 0;
   const digitalMaturity = dashboardData
     ? Math.round(
@@ -168,7 +172,7 @@ export default function ITDepartmentDigitalTransformation() {
     inProgressProjects: projects.filter((p: any) => ['development', 'testing', 'deployment'].includes(p.status)).length,
     digitalMaturity,
     openTickets: dashboardData?.tickets?.open ?? tickets.filter((t: any) => t.status === 'open').length,
-    cloudServices: externalSystems.length,
+    cloudServices: cloudTotal,
     cloudUsagePercent,
     pendingTasksCount: pendingTasks.length,
   };

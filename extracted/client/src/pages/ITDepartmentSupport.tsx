@@ -80,12 +80,13 @@ export default function ITDepartmentSupport() {
   const [ticketForm, setTicketForm] = useState({ title: '', category: 'technical', priority: 'medium', description: '' });
 
   const { data: dashboardData, isLoading: dashboardLoading, dataUpdatedAt: dashboardUpdatedAt } = useQuery<{
-    tickets: { total: number; open: number; inProgress: number; resolved: number; closed: number; highPriority: number; avgResolutionHours: number; resolutionRate: number };
+    tickets: { total: number; open: number; inProgress: number; resolved: number; closed: number; highPriority: number; avgResolutionHours: number; resolutionRate: number; slaBreaches?: number };
     sla: { total: number; active: number };
     satisfaction: { totalResponses: number; avgRating: number };
-    tasks: { total: number; pending: number };
+    tasks: { total: number; pending: number; completed?: number; overdue?: number; completionRate?: number };
     escalations: { total: number; pending: number };
     agents: { total: number };
+    referrals?: { total: number; active: number };
   }>({
     queryKey: ['/api/dashboard/support'],
     refetchInterval: 2 * 60 * 1000,
@@ -420,6 +421,24 @@ export default function ITDepartmentSupport() {
                   </CardContent>
                 </Card>
               )}
+              {(dashboardData.tickets.slaBreaches ?? 0) > 0 && (
+                <Card className="border-destructive/30 bg-destructive/5" data-testid="sla-breaches-alert">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-destructive/10 rounded-lg">
+                        <Shield className="w-5 h-5 text-destructive" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-destructive">انتهاكات SLA</p>
+                        <p className="text-sm text-muted-foreground">
+                          {dashboardData.tickets.slaBreaches} تذكرة تجاوزت اتفاقية مستوى الخدمة
+                        </p>
+                      </div>
+                      <Badge variant="destructive" data-testid="badge-sla-breaches">{dashboardData.tickets.slaBreaches}</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               <Card className="stat-card-enhanced" data-testid="department-tasks-card">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -432,11 +451,48 @@ export default function ITDepartmentSupport() {
                         <p className="text-2xl font-bold text-foreground">{dashboardData.tasks.pending}</p>
                         <span className="text-sm text-muted-foreground">معلقة من {dashboardData.tasks.total}</span>
                       </div>
+                      {(dashboardData.tasks.completionRate ?? 0) > 0 && (
+                        <div className="mt-2">
+                          <div className="flex justify-between text-[10px] text-muted-foreground/60 mb-1">
+                            <span>معدل الإنجاز</span>
+                            <span>{dashboardData.tasks.completionRate}%</span>
+                          </div>
+                          <Progress value={dashboardData.tasks.completionRate ?? 0} className="h-1.5" data-testid="progress-task-completion" />
+                        </div>
+                      )}
+                      {((dashboardData.tasks.completed ?? 0) > 0 || (dashboardData.tasks.overdue ?? 0) > 0) && (
+                        <div className="flex items-center gap-3 mt-1.5 text-[10px]">
+                          {(dashboardData.tasks.completed ?? 0) > 0 && (
+                            <span className="text-emerald-500">{dashboardData.tasks.completed} مكتملة</span>
+                          )}
+                          {(dashboardData.tasks.overdue ?? 0) > 0 && (
+                            <span className="text-destructive">{dashboardData.tasks.overdue} متأخرة</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Progress value={dashboardData.tasks.total > 0 ? ((dashboardData.tasks.total - dashboardData.tasks.pending) / dashboardData.tasks.total) * 100 : 0} className="w-20 h-2" />
                   </div>
                 </CardContent>
               </Card>
+              {dashboardData.referrals && dashboardData.referrals.total > 0 && (
+                <Card className="stat-card-enhanced" data-testid="referrals-card">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="hub-icon-navy">
+                        <Globe className="w-5 h-5 text-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">الإحالات</p>
+                        <div className="flex items-baseline gap-1">
+                          <p className="text-2xl font-bold text-foreground">{dashboardData.referrals.total}</p>
+                          <span className="text-sm text-muted-foreground">{dashboardData.referrals.active} نشطة</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         ) : null}

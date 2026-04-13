@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { exportToPDF, exportToExcel } from "@/lib/exports";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -317,6 +318,7 @@ export default function EmployeePortal() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const portalMeta = user?.portal ? PORTAL_META[user.portal] : null;
   const quickActions = user?.portal ? (PORTAL_QUICK_ACTIONS[user.portal] || DEFAULT_QUICK_ACTIONS) : DEFAULT_QUICK_ACTIONS;
@@ -344,11 +346,13 @@ export default function EmployeePortal() {
   const markReadMutation = useMutation({
     mutationFn: (id: number) => apiRequest("PUT", `/api/notifications/${id}/read`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: "destructive" }); },
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: () => apiRequest("PUT", "/api/notifications/read-all"),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: "destructive" }); },
   });
 
   const myTasks = useMemo(() =>

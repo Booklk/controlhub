@@ -38,6 +38,10 @@ interface CybersecurityStats {
   totalVulnerabilities: number; criticalVulnerabilities: number;
   activeThreats: number; resolvedThreats: number;
   avgResolutionTime: number; threatsByType: Record<string, number>;
+  securityScore?: number;
+  incidentResponseTime?: number;
+  openVulnerabilities?: number;
+  resolvedVulnerabilities?: number;
 }
 
 function PostureScore({ score }: { score: number }) {
@@ -127,7 +131,11 @@ export default function CybersecurityDashboard() {
   const loading = statsLoading;
   const error = statsError ? 'حدث خطأ أثناء تحميل بيانات لوحة المعلومات' : null;
 
-  const score = stats ? Math.max(0, Math.min(100, 100 - (stats.criticalVulnerabilities * 20 + stats.activeThreats * 10))) : 0;
+  const score = stats
+    ? (stats.securityScore != null
+        ? Math.max(0, Math.min(100, stats.securityScore))
+        : Math.max(0, Math.min(100, 100 - (stats.criticalVulnerabilities * 20 + stats.activeThreats * 10))))
+    : 0;
   const chartData = stats?.threatsByType
     ? Object.entries(stats.threatsByType).map(([t, v]) => ({ name: t, value: v, label: threatTypeLabels[t] || t }))
     : [];
@@ -234,7 +242,7 @@ export default function CybersecurityDashboard() {
             { id: 'stat-critical', label: 'ثغرات حرجة', value: stats?.criticalVulnerabilities || 0, total: stats?.totalVulnerabilities || 0, sub: `من إجمالي ${stats?.totalVulnerabilities || 0}`, stripe: stats?.criticalVulnerabilities ? 'bg-red-500' : 'bg-amber-400/70', iconBg: stats?.criticalVulnerabilities ? 'bg-red-500/15' : 'bg-amber-400/15', color: stats?.criticalVulnerabilities ? 'hsl(0 84% 60%)' : 'hsl(43 74% 49%)', barColor: stats?.criticalVulnerabilities ? 'bg-red-500' : 'bg-amber-400', urgent: (stats?.criticalVulnerabilities || 0) > 0, Icon: Bug },
             { id: 'stat-threats', label: 'تهديدات نشطة', value: stats?.activeThreats || 0, total: (stats?.activeThreats || 0) + (stats?.resolvedThreats || 0), sub: 'تحتاج معالجة', stripe: 'bg-amber-400/70', iconBg: 'bg-amber-400/15', color: 'hsl(43 74% 49%)', barColor: 'bg-amber-400', urgent: false, Icon: AlertTriangle },
             { id: 'stat-resolved', label: 'تهديدات محلولة', value: stats?.resolvedThreats || 0, total: (stats?.activeThreats || 0) + (stats?.resolvedThreats || 0), sub: 'تم الحل', stripe: 'bg-emerald-500', iconBg: 'bg-emerald-500/15', color: 'hsl(142 76% 36%)', barColor: 'bg-emerald-500', urgent: false, Icon: CheckCircle },
-            { id: 'stat-resolution-time', label: 'متوسط وقت الحل', value: stats?.avgResolutionTime || 0, total: 72, sub: 'ساعة للمعالجة', stripe: 'bg-primary/40', iconBg: 'bg-primary/15', color: 'hsl(222 47% 70%)', barColor: 'bg-primary/60', urgent: false, Icon: Clock },
+            { id: 'stat-resolution-time', label: stats?.incidentResponseTime != null ? 'وقت الاستجابة للحوادث' : 'متوسط وقت الحل', value: stats?.incidentResponseTime ?? stats?.avgResolutionTime ?? 0, total: 72, sub: stats?.incidentResponseTime != null ? 'دقيقة للاستجابة' : 'ساعة للمعالجة', stripe: 'bg-primary/40', iconBg: 'bg-primary/15', color: 'hsl(222 47% 70%)', barColor: 'bg-primary/60', urgent: false, Icon: Clock },
           ].map(({ id, label, value, total, sub, stripe, iconBg, color, barColor, urgent, Icon }) => (
             <Card key={id} className={`hub-card hub-card-hover relative overflow-hidden ${urgent ? 'hub-critical-pulse' : ''}`} data-testid={id}>
               <div className={`absolute inset-y-0 right-0 w-[3px] rounded-l-sm ${stripe}`} />
@@ -466,6 +474,33 @@ export default function CybersecurityDashboard() {
                     <span className="text-lg font-bold" style={{ color: c }}>{v}</span>
                   </div>
                 ))}
+                {(stats?.openVulnerabilities != null || stats?.resolvedVulnerabilities != null) && (
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'hsla(222 47% 20% / 0.3)' }} data-testid="vulnerability-trend">
+                    <p className="text-sm text-white/60 mb-2">اتجاه الثغرات (مفتوحة مقابل محلولة)</p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <div className="flex justify-between text-xs text-white/40 mb-1">
+                          <span>مفتوحة: {stats?.openVulnerabilities ?? 0}</span>
+                          <span>محلولة: {stats?.resolvedVulnerabilities ?? 0}</span>
+                        </div>
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden flex">
+                          {(() => {
+                            const open = stats?.openVulnerabilities ?? 0;
+                            const resolved = stats?.resolvedVulnerabilities ?? 0;
+                            const total = open + resolved;
+                            if (total === 0) return null;
+                            return (
+                              <>
+                                <div className="h-full bg-red-400 transition-all duration-700" style={{ width: `${(open / total) * 100}%` }} />
+                                <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(resolved / total) * 100}%` }} />
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
