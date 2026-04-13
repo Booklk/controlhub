@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Lightbulb, Bug, AlertTriangle, Send, Clock, CheckCircle2, XCircle,
-  Plus, FileText, Loader2, Sparkles
+  Plus, FileText, Loader2, Sparkles, Pencil
 } from 'lucide-react';
 import type { FeatureRequest } from '@shared/schema';
 
@@ -62,6 +62,7 @@ export default function FeatureRequestPage({ navGroups, portalName, portalId }: 
   const { user } = useAuth();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -92,12 +93,36 @@ export default function FeatureRequestPage({ navGroups, portalName, portalId }: 
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const res = await apiRequest('PATCH', `/api/feature-requests/${editingItem?.id}`, {
+        ...data,
+        portal: portalId,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/feature-requests'] });
+      toast({ title: 'تم تحديث الطلب بنجاح' });
+      setDialogOpen(false);
+      setEditingItem(null);
+      setFormData({ title: '', description: '', type: 'feature', priority: 'medium' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleSubmit = () => {
     if (!formData.title.trim() || !formData.description.trim()) {
       toast({ title: 'تنبيه', description: 'يرجى تعبئة جميع الحقول المطلوبة', variant: 'destructive' });
       return;
     }
-    createMutation.mutate(formData);
+    if (editingItem) {
+      updateMutation.mutate(formData);
+    } else {
+      createMutation.mutate(formData);
+    }
   };
 
   const getTypeInfo = (type: string) => TYPE_OPTIONS.find(t => t.value === type) || TYPE_OPTIONS[0];
