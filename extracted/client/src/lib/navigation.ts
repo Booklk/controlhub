@@ -294,6 +294,8 @@ export const dmoNavGroups: NavGroup[] = [
     items: [
       { title: 'فهرس البيانات', href: '/dmo/data-catalog', icon: BookOpen, resource: RESOURCES.DATA_CATALOG },
       { title: 'مستودع البيانات التحليلي', href: '/dmo/data-warehouse', icon: Database },
+      { title: 'أدوات التحليل', href: '/dmo/analytics', icon: BarChart3 },
+      { title: 'مركز التقارير', href: '/dmo/reports-center', icon: FileBarChart },
       { title: 'أصول البيانات', href: '/dmo/data-assets', icon: FolderOpen },
       { title: 'قاموس البيانات', href: '/dmo/data-dictionary', icon: FileText },
       { title: 'تصنيفات البيانات', href: '/dmo/data-classifications', icon: Layers },

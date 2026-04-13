@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import {
   Building2, CheckCircle, AlertTriangle, Globe, Lock, Eye,
   Activity, Target, Layers, FileDown, FileSpreadsheet,
   Server, GitMerge, PieChart as PieChartIcon, Zap, Clock,
+  RefreshCw, Plug, Table2, Wifi, WifiOff, Play, History,
 } from "lucide-react";
 
 const COLORS = ['#c9a227', '#1e3a5f', '#2d4a6f', '#3d5a80', '#6366f1', '#059669'];
@@ -86,6 +88,35 @@ export default function DataWarehousePage() {
   const { data: quality, isLoading: qualityLoading } = useQuery<any>({
     queryKey: ["/api/data-warehouse/data-quality-summary"],
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: externalSources = [] } = useQuery<any[]>({
+    queryKey: ["/api/data-warehouse/external-sources"],
+    staleTime: 3 * 60 * 1000,
+  });
+
+  const { data: sourcesSummary } = useQuery<any>({
+    queryKey: ["/api/data-warehouse/sources-summary"],
+    staleTime: 3 * 60 * 1000,
+  });
+
+  const { data: etlStatus = [] } = useQuery<any[]>({
+    queryKey: ["/api/data-warehouse/etl/status"],
+    staleTime: 60 * 1000,
+  });
+
+  const runETLMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/data-warehouse/etl/run");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: `تم تشغيل ETL بنجاح (${data.duration}ms)` });
+      queryClient.invalidateQueries({ queryKey: ["/api/data-warehouse"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    },
   });
 
   const handleExportPDF = () => {
@@ -181,11 +212,13 @@ export default function DataWarehousePage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
-          <TabsList className="grid w-full grid-cols-4 bg-[hsl(222_47%_11%)]/50">
+          <TabsList className="grid w-full grid-cols-6 bg-[hsl(222_47%_11%)]/50">
             <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
             <TabsTrigger value="departments">الإدارات</TabsTrigger>
             <TabsTrigger value="compliance">الامتثال</TabsTrigger>
             <TabsTrigger value="data-quality">جودة البيانات</TabsTrigger>
+            <TabsTrigger value="external-sources">المصادر الخارجية</TabsTrigger>
+            <TabsTrigger value="etl-log">سجل ETL</TabsTrigger>
           </TabsList>
 
           {/* ==================== نظرة عامة ==================== */}
@@ -528,6 +561,255 @@ export default function DataWarehousePage() {
                   </Card>
                 </div>
               </>
+            )}
+          </TabsContent>
+
+          {/* ==================== المصادر الخارجية ==================== */}
+          <TabsContent value="external-sources" className="space-y-6 mt-4">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <StatCard title="إجمالي المصادر" value={sourcesSummary?.totalSources || externalSources.length || 0} icon={Plug} />
+              <StatCard title="متصل اليوم" value={sourcesSummary?.connectedToday || externalSources.filter((s: any) => s.status === 'connected').length || 0} icon={Wifi} />
+              <StatCard title="فشل اليوم" value={sourcesSummary?.failedToday || externalSources.filter((s: any) => s.status === 'error' || s.status === 'disconnected').length || 0} icon={WifiOff} />
+              <StatCard title="الجداول الخارجية" value={sourcesSummary?.totalExternalTables || 0} icon={Table2} />
+              <StatCard title="إجمالي السجلات" value={sourcesSummary?.totalRows?.toLocaleString() || 0} icon={Database} />
+            </div>
+
+            {/* ETL Manual Run Button */}
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => runETLMutation.mutate()}
+                disabled={runETLMutation.isPending}
+                className="gap-2 bg-[hsl(43_74%_49%)] hover:bg-[hsl(43_74%_42%)] text-black font-semibold"
+              >
+                {runETLMutation.isPending ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+                تشغيل ETL يدوياً
+              </Button>
+              {runETLMutation.isPending && (
+                <span className="text-sm text-muted-foreground">جاري التشغيل...</span>
+              )}
+            </div>
+
+            {/* Source List */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Server className="w-4 h-4 hub-stat-gold" />
+                المصادر المتصلة
+              </h3>
+              {externalSources.length === 0 ? (
+                <Card className="card-premium">
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    <Plug className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                    <p>لا توجد مصادر خارجية مسجلة</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {externalSources.map((source: any, idx: number) => {
+                    const isConnected = source.status === 'connected';
+                    const isError = source.status === 'error';
+                    return (
+                      <Card key={source.id || idx} className="card-premium">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-[hsl(43_74%_49%)]/10">
+                                <Database className="w-5 h-5 hub-stat-gold" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold">{source.name}</h4>
+                                <p className="text-xs text-muted-foreground">{source.host || source.connectionString || '—'}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">{source.type || source.dbType || 'Unknown'}</Badge>
+                              <Badge className={`text-xs border-0 ${isConnected ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                {isConnected ? 'متصل' : isError ? 'خطأ' : 'غير متصل'}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-4 gap-3 text-center">
+                            <div>
+                              <p className="text-lg font-bold">{source.tablesCount ?? source.tables ?? '—'}</p>
+                              <p className="text-xs text-muted-foreground">جداول</p>
+                            </div>
+                            <div>
+                              <p className="text-lg font-bold">{source.rowsCount?.toLocaleString() ?? source.rows?.toLocaleString() ?? '—'}</p>
+                              <p className="text-xs text-muted-foreground">سجلات</p>
+                            </div>
+                            <div>
+                              <p className="text-lg font-bold">{source.columnsCount ?? source.columns ?? '—'}</p>
+                              <p className="text-xs text-muted-foreground">أعمدة</p>
+                            </div>
+                            <div>
+                              <p className="text-lg font-bold">{source.responseTime ? `${source.responseTime}ms` : '—'}</p>
+                              <p className="text-xs text-muted-foreground">وقت الاستجابة</p>
+                            </div>
+                          </div>
+
+                          {source.lastSync && (
+                            <div className="mt-3 pt-2 border-t border-white/5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              آخر مزامنة: {new Date(source.lastSync).toLocaleString('ar-SA')}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* ETL History (last 10 runs) */}
+            {etlStatus.length > 0 && (
+              <Card className="card-premium">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <History className="w-4 h-4 hub-stat-gold" />
+                    آخر عمليات ETL
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-white/10 text-muted-foreground">
+                          <th className="text-right py-2 px-3">التشغيل</th>
+                          <th className="text-right py-2 px-3">الحالة</th>
+                          <th className="text-right py-2 px-3">المدة</th>
+                          <th className="text-right py-2 px-3">السجلات</th>
+                          <th className="text-right py-2 px-3">التاريخ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {etlStatus.slice(0, 10).map((run: any, idx: number) => (
+                          <tr key={run.id || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="py-2 px-3 font-medium">#{run.id || idx + 1}</td>
+                            <td className="py-2 px-3">
+                              <Badge className={`text-xs border-0 ${run.status === 'success' || run.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : run.status === 'running' || run.status === 'in_progress' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                                {run.status === 'success' || run.status === 'completed' ? 'ناجح' : run.status === 'running' || run.status === 'in_progress' ? 'جاري' : 'فشل'}
+                              </Badge>
+                            </td>
+                            <td className="py-2 px-3">{run.duration ? `${run.duration}ms` : '—'}</td>
+                            <td className="py-2 px-3">{run.recordsProcessed?.toLocaleString() ?? run.records?.toLocaleString() ?? '—'}</td>
+                            <td className="py-2 px-3 text-muted-foreground">{run.startedAt || run.timestamp ? new Date(run.startedAt || run.timestamp).toLocaleString('ar-SA') : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* ==================== سجل ETL ==================== */}
+          <TabsContent value="etl-log" className="space-y-6 mt-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <GitMerge className="w-4 h-4 hub-stat-gold" />
+                سجل عمليات ETL الكامل
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => runETLMutation.mutate()}
+                disabled={runETLMutation.isPending}
+                className="gap-1.5"
+              >
+                {runETLMutation.isPending ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+                تشغيل ETL يدوياً
+              </Button>
+            </div>
+
+            {etlStatus.length === 0 ? (
+              <Card className="card-premium">
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <History className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p>لا توجد عمليات ETL مسجلة</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="card-premium">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-white/10 text-muted-foreground bg-[hsl(222_47%_11%)]/30">
+                          <th className="text-right py-3 px-4">#</th>
+                          <th className="text-right py-3 px-4">الحالة</th>
+                          <th className="text-right py-3 px-4">النوع</th>
+                          <th className="text-right py-3 px-4">المدة (ms)</th>
+                          <th className="text-right py-3 px-4">السجلات المعالجة</th>
+                          <th className="text-right py-3 px-4">الأخطاء</th>
+                          <th className="text-right py-3 px-4">وقت البدء</th>
+                          <th className="text-right py-3 px-4">وقت الانتهاء</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {etlStatus.map((run: any, idx: number) => (
+                          <tr key={run.id || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="py-3 px-4 font-medium">{run.id || idx + 1}</td>
+                            <td className="py-3 px-4">
+                              <Badge className={`text-xs border-0 ${run.status === 'success' || run.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : run.status === 'running' || run.status === 'in_progress' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                                {run.status === 'success' || run.status === 'completed' ? 'ناجح' : run.status === 'running' || run.status === 'in_progress' ? 'جاري' : 'فشل'}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4">{run.type || run.pipeline || 'عام'}</td>
+                            <td className="py-3 px-4">{run.duration?.toLocaleString() ?? '—'}</td>
+                            <td className="py-3 px-4">{run.recordsProcessed?.toLocaleString() ?? run.records?.toLocaleString() ?? '—'}</td>
+                            <td className="py-3 px-4">
+                              {(run.errors || run.errorCount) ? (
+                                <span className="text-red-400">{run.errors || run.errorCount}</span>
+                              ) : (
+                                <span className="text-emerald-400">0</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-muted-foreground text-xs">{run.startedAt || run.timestamp ? new Date(run.startedAt || run.timestamp).toLocaleString('ar-SA') : '—'}</td>
+                            <td className="py-3 px-4 text-muted-foreground text-xs">{run.completedAt || run.endTime ? new Date(run.completedAt || run.endTime).toLocaleString('ar-SA') : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ETL Summary Stats */}
+            {etlStatus.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatCard
+                  title="إجمالي العمليات"
+                  value={etlStatus.length}
+                  icon={Activity}
+                />
+                <StatCard
+                  title="العمليات الناجحة"
+                  value={etlStatus.filter((r: any) => r.status === 'success' || r.status === 'completed').length}
+                  icon={CheckCircle}
+                />
+                <StatCard
+                  title="العمليات الفاشلة"
+                  value={etlStatus.filter((r: any) => r.status === 'failed' || r.status === 'error').length}
+                  icon={AlertTriangle}
+                />
+                <StatCard
+                  title="متوسط المدة"
+                  value={`${Math.round(etlStatus.reduce((sum: number, r: any) => sum + (r.duration || 0), 0) / etlStatus.length)}ms`}
+                  icon={Clock}
+                />
+              </div>
             )}
           </TabsContent>
         </Tabs>
