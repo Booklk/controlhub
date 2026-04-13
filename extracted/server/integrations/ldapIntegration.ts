@@ -258,7 +258,7 @@ export async function syncLdapUsers(config?: LdapConfig): Promise<LdapSyncResult
             .where(eq(users.id, existingId));
           result.updated++;
         } else {
-          const tempPassword = await bcrypt.hash(`AD_${Date.now()}_${Math.random()}`, 10);
+          const tempPassword = await bcrypt.hash(`AD_${Date.now()}_${Math.random()}`, 12);
           await db.insert(users).values({
             email,
             name: ldapUser.displayName || ldapUser.username,

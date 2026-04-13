@@ -314,24 +314,27 @@ export class DatabaseStorage implements IStorage {
       return;
     }
 
-    const bcrypt = await import('bcryptjs');
-    const defaultPassword = await bcrypt.hash('Admin@2024', 10);
+    if (process.env.NODE_ENV !== 'production') {
+      const bcrypt = await import('bcryptjs');
+      const seedPassword = process.env.SEED_PASSWORD || 'ControlHub@' + new Date().getFullYear();
+      const defaultPassword = await bcrypt.hash(seedPassword, 12);
 
-    await database.insert(users).values({
-      email: 'admin@jcsa.sa',
-      passwordHash: defaultPassword,
-      name: 'مدير النظام',
-      nameEn: 'System Admin',
-      phone: '+966500000000',
-      role: 'admin',
-      portal: 'admin',
-      jobTitle: 'مدير النظام',
-      itDepartmentId: null,
-      isActive: true,
-      isActivated: true,
-      emailNotificationsEnabled: false,
-      loginAttempts: 0,
-    });
+      await database.insert(users).values({
+        email: 'admin@jcsa.sa',
+        passwordHash: defaultPassword,
+        name: 'مدير النظام',
+        nameEn: 'System Admin',
+        phone: '+966500000000',
+        role: 'admin',
+        portal: 'admin',
+        jobTitle: 'مدير النظام',
+        itDepartmentId: null,
+        isActive: true,
+        isActivated: true,
+        emailNotificationsEnabled: false,
+        loginAttempts: 0,
+      });
+    }
 
     const itDepts = [
       { nameAr: 'إدارة مكتب البيانات', nameEn: 'Data Management Office', code: 'DMO', departmentType: 'dmo', color: '#6366f1', icon: 'Database', sortOrder: -1 },

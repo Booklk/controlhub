@@ -301,7 +301,7 @@ export function registerAuthRoutes(app: Express) {
       if (user.activationTokenExpiry && new Date(user.activationTokenExpiry) < new Date()) {
         return res.status(400).json({ error: 'انتهت صلاحية رابط التفعيل' });
       }
-      const passwordHash = await bcrypt.hash(password, 10);
+      const passwordHash = await bcrypt.hash(password, 12);
       await storage.updateUser(user.id, { passwordHash, isActivated: true, activationToken: null, activationTokenExpiry: null });
       await storage.createAuditLog({
         userId: user.id, action: 'activate', entityType: 'user', entityId: user.id,

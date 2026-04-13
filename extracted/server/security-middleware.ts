@@ -35,15 +35,10 @@ export const helmetConfig = helmet({
 });
 
 // ==================== CORS Configuration ====================
+const envOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) || [];
 const allowedOrigins = [
-  'https://controlhub.jcsa.sa',
-  'https://www.controlhub.jcsa.sa',
-  'https://172.19.101.24',
-  'https://172.19.102.24',
-  'http://172.19.101.24',
-  'http://172.19.102.24',
-  'http://localhost:5000',
-  'https://localhost',
+  ...envOrigins,
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:5000', 'http://localhost:3000', 'http://0.0.0.0:5000'] : []),
 ];
 
 export const corsConfig = cors({

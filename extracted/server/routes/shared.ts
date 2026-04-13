@@ -44,7 +44,25 @@ import { notifyTicketCreated, notifyTicketStatusChanged, notifyProjectCreated, n
 import { testConnection, discoverTables, ConnectionConfig } from "../external-db";
 import { logger, publicEndpointRateLimiter } from "../security-middleware";
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const ALLOWED_MIMES = [
+  'application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain', 'text/csv', 'application/zip', 'application/x-rar-compressed',
+];
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIMES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('نوع الملف غير مسموح'));
+    }
+  }
+});
 
 function parseId(raw: any, res: any): number | null {
   const id = parseInt(raw);
@@ -61,11 +79,17 @@ const JWT_ALGORITHM = 'HS512' as const;
 
 const getJWTSecret = (): string => {
   if (JWT_ACCESS_SECRET) return JWT_ACCESS_SECRET;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL: JWT_SECRET environment variable is required');
+  }
   return 'dev-only-unsafe-secret-do-not-use-in-production';
 };
 
 const getRefreshSecret = (): string => {
   if (JWT_REFRESH_SECRET) return JWT_REFRESH_SECRET;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL: JWT_REFRESH_SECRET environment variable is required');
+  }
   return (process.env.SESSION_SECRET || 'dev-session') + ':refresh-v2:' + (process.env.SESSION_SECRET?.slice(-4) || 'xxxx');
 };
 
