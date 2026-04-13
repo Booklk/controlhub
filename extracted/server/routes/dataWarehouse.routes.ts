@@ -11,6 +11,7 @@ import {
   db, sql, authenticateToken, logger, cache, TTL,
   requirePortal, DMO_PORTALS, ADMIN_PORTALS, IT_DIRECTOR_PORTALS,
 } from "./shared";
+import { runFullETL, startETLScheduler } from "../services/dataWarehouseETL";
 
 export function registerDataWarehouseRoutes(app: Express) {
 
@@ -422,5 +423,101 @@ export function registerDataWarehouseRoutes(app: Express) {
       res.status(500).json({ error: 'حدث خطأ في تحليلات جودة البيانات' });
     }
   });
+
+  // ==================== 6. تشغيل ETL يدوياً ====================
+  app.post("/api/data-warehouse/etl/run", authenticateToken, requirePortal(DW_ALLOWED_PORTALS), async (req: any, res) => {
+    try {
+      const adminRoles = ['system_admin', 'admin', 'dmo_manager'];
+      if (!adminRoles.includes(req.user?.role)) {
+        return res.status(403).json({ error: 'صلاحية تشغيل ETL مقتصرة على المدراء' });
+      }
+      logger.info(`[DW-ETL] Manual run triggered by ${req.user.name || req.user.email}`);
+      const result = await runFullETL();
+      res.json(result);
+    } catch (error) {
+      logger.error('[DataWarehouse] ETL run error:', { error: (error as Error).message });
+      res.status(500).json({ error: 'حدث خطأ في تشغيل ETL' });
+    }
+  });
+
+  // ==================== 7. حالة ETL ====================
+  app.get("/api/data-warehouse/etl/status", authenticateToken, requirePortal(DW_ALLOWED_PORTALS), async (req: any, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT id, run_type, status, records_processed, error_message, started_at, completed_at, duration_ms
+        FROM dw_etl_log ORDER BY started_at DESC LIMIT 20
+      `);
+      const rows = (result as any).rows || result;
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ error: 'حدث خطأ في جلب حالة ETL' });
+    }
+  });
+
+  // ==================== 8. تحليلات تاريخية من المستودع ====================
+  app.get("/api/data-warehouse/historical/tickets", authenticateToken, requirePortal(DW_ALLOWED_PORTALS), async (req: any, res) => {
+    try {
+      const { months = '6', deptId } = req.query;
+      const monthsNum = Math.min(parseInt(months as string) || 6, 24);
+
+      let query;
+      if (deptId) {
+        query = sql`
+          SELECT d.month_ar as month, d.year, d.month as month_num,
+            SUM(f.created_count)::int as created, SUM(f.resolved_count)::int as resolved,
+            AVG(f.open_count)::int as avg_open, AVG(f.avg_resolution_hours)::numeric(10,1) as avg_resolution,
+            SUM(f.sla_breaches)::int as sla_breaches
+          FROM dw_fact_tickets_daily f
+          JOIN dw_dim_date d ON f.date_id = d.id
+          WHERE f.dept_id = ${parseInt(deptId as string)}
+            AND d.full_date >= NOW() - (${monthsNum} || ' months')::interval
+          GROUP BY d.month_ar, d.year, d.month
+          ORDER BY d.year, d.month
+        `;
+      } else {
+        query = sql`
+          SELECT d.month_ar as month, d.year, d.month as month_num,
+            SUM(f.created_count)::int as created, SUM(f.resolved_count)::int as resolved,
+            AVG(f.open_count)::int as avg_open, AVG(f.avg_resolution_hours)::numeric(10,1) as avg_resolution,
+            SUM(f.sla_breaches)::int as sla_breaches
+          FROM dw_fact_tickets_daily f
+          JOIN dw_dim_date d ON f.date_id = d.id
+          WHERE d.full_date >= NOW() - (${monthsNum} || ' months')::interval
+          GROUP BY d.month_ar, d.year, d.month
+          ORDER BY d.year, d.month
+        `;
+      }
+
+      const result = await db.execute(query);
+      res.json((result as any).rows || result);
+    } catch (error) {
+      logger.error('[DW] Historical tickets error:', { error: (error as Error).message });
+      res.status(500).json({ error: 'حدث خطأ في التحليلات التاريخية' });
+    }
+  });
+
+  app.get("/api/data-warehouse/historical/compliance", authenticateToken, requirePortal(DW_ALLOWED_PORTALS), async (req: any, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT d.month_ar as month, d.year, d.month as month_num,
+          SUM(f.total_requirements)::int as requirements,
+          SUM(f.compliant_count)::int as compliant,
+          AVG(f.compliance_rate)::numeric(5,1) as avg_compliance_rate,
+          SUM(f.total_evidences)::int as evidences,
+          SUM(f.approved_evidences)::int as approved_evidences
+        FROM dw_fact_compliance_monthly f
+        JOIN dw_dim_date d ON f.date_id = d.id
+        WHERE d.full_date >= NOW() - INTERVAL '12 months'
+        GROUP BY d.month_ar, d.year, d.month
+        ORDER BY d.year, d.month
+      `);
+      res.json((result as any).rows || result);
+    } catch (error) {
+      res.status(500).json({ error: 'حدث خطأ في تحليلات الامتثال التاريخية' });
+    }
+  });
+
+  // بدء جدولة ETL
+  startETLScheduler();
 
 }

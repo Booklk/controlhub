@@ -2684,3 +2684,126 @@ export const integrationConfigs = pgTable("integration_configs", {
   updatedBy: integer("updated_by").references(() => users.id, { onDelete: "set null" }),
 });
 export type IntegrationConfig = typeof integrationConfigs.$inferSelect;
+
+// ==================== مستودع البيانات - Data Warehouse ====================
+// Star Schema: Dimension + Fact tables للتحليلات التاريخية
+
+// بُعد التاريخ
+export const dwDimDate = pgTable("dw_dim_date", {
+  id: serial("id").primaryKey(),
+  fullDate: timestamp("full_date").notNull().unique(),
+  day: integer("day").notNull(),
+  month: integer("month").notNull(),
+  monthAr: varchar("month_ar", { length: 20 }).notNull(),
+  quarter: integer("quarter").notNull(),
+  year: integer("year").notNull(),
+  weekOfYear: integer("week_of_year").notNull(),
+  dayOfWeek: integer("day_of_week").notNull(),
+  isWeekend: boolean("is_weekend").default(false).notNull(),
+  fiscalQuarter: varchar("fiscal_quarter", { length: 10 }),
+});
+
+// بُعد الإدارات
+export const dwDimDepartment = pgTable("dw_dim_department", {
+  id: serial("id").primaryKey(),
+  deptId: integer("dept_id").notNull().unique(),
+  nameAr: varchar("name_ar", { length: 200 }).notNull(),
+  nameEn: varchar("name_en", { length: 200 }),
+  code: varchar("code", { length: 20 }).notNull(),
+  type: varchar("type", { length: 50 }).default("it_department"),
+});
+
+// حقائق التذاكر اليومية
+export const dwFactTicketsDaily = pgTable("dw_fact_tickets_daily", {
+  id: serial("id").primaryKey(),
+  dateId: integer("date_id").notNull().references(() => dwDimDate.id),
+  deptId: integer("dept_id").notNull(),
+  createdCount: integer("created_count").default(0).notNull(),
+  resolvedCount: integer("resolved_count").default(0).notNull(),
+  openCount: integer("open_count").default(0).notNull(),
+  avgResolutionHours: decimal("avg_resolution_hours", { precision: 10, scale: 1 }).default("0"),
+  slaBreaches: integer("sla_breaches").default(0).notNull(),
+  highPriorityCount: integer("high_priority_count").default(0).notNull(),
+  snapshotAt: timestamp("snapshot_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// حقائق المهام اليومية
+export const dwFactTasksDaily = pgTable("dw_fact_tasks_daily", {
+  id: serial("id").primaryKey(),
+  dateId: integer("date_id").notNull().references(() => dwDimDate.id),
+  deptId: integer("dept_id").notNull(),
+  createdCount: integer("created_count").default(0).notNull(),
+  completedCount: integer("completed_count").default(0).notNull(),
+  overdueCount: integer("overdue_count").default(0).notNull(),
+  inProgressCount: integer("in_progress_count").default(0).notNull(),
+  avgCompletionHours: decimal("avg_completion_hours", { precision: 10, scale: 1 }).default("0"),
+  snapshotAt: timestamp("snapshot_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// حقائق المشاريع (لقطة شهرية)
+export const dwFactProjectsMonthly = pgTable("dw_fact_projects_monthly", {
+  id: serial("id").primaryKey(),
+  dateId: integer("date_id").notNull().references(() => dwDimDate.id),
+  deptId: integer("dept_id").notNull(),
+  totalCount: integer("total_count").default(0).notNull(),
+  activeCount: integer("active_count").default(0).notNull(),
+  completedCount: integer("completed_count").default(0).notNull(),
+  delayedCount: integer("delayed_count").default(0).notNull(),
+  avgProgress: integer("avg_progress").default(0).notNull(),
+  totalBudget: decimal("total_budget", { precision: 15, scale: 2 }).default("0"),
+  snapshotAt: timestamp("snapshot_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// حقائق الامتثال (لقطة شهرية)
+export const dwFactComplianceMonthly = pgTable("dw_fact_compliance_monthly", {
+  id: serial("id").primaryKey(),
+  dateId: integer("date_id").notNull().references(() => dwDimDate.id),
+  domainId: integer("domain_id"),
+  totalRequirements: integer("total_requirements").default(0).notNull(),
+  compliantCount: integer("compliant_count").default(0).notNull(),
+  nonCompliantCount: integer("non_compliant_count").default(0).notNull(),
+  totalEvidences: integer("total_evidences").default(0).notNull(),
+  approvedEvidences: integer("approved_evidences").default(0).notNull(),
+  complianceRate: decimal("compliance_rate", { precision: 5, scale: 2 }).default("0"),
+  snapshotAt: timestamp("snapshot_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// حقائق الأمن (يومي)
+export const dwFactSecurityDaily = pgTable("dw_fact_security_daily", {
+  id: serial("id").primaryKey(),
+  dateId: integer("date_id").notNull().references(() => dwDimDate.id),
+  incidentsCreated: integer("incidents_created").default(0).notNull(),
+  incidentsResolved: integer("incidents_resolved").default(0).notNull(),
+  vulnerabilitiesOpen: integer("vulnerabilities_open").default(0).notNull(),
+  vulnerabilitiesClosed: integer("vulnerabilities_closed").default(0).notNull(),
+  threatCount: integer("threat_count").default(0).notNull(),
+  riskScore: integer("risk_score").default(0).notNull(),
+  snapshotAt: timestamp("snapshot_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// حقائق حوكمة البيانات (شهري)
+export const dwFactDataGovernanceMonthly = pgTable("dw_fact_data_governance_monthly", {
+  id: serial("id").primaryKey(),
+  dateId: integer("date_id").notNull().references(() => dwDimDate.id),
+  totalAssets: integer("total_assets").default(0).notNull(),
+  classifiedAssets: integer("classified_assets").default(0).notNull(),
+  totalConnections: integer("total_connections").default(0).notNull(),
+  discoveredTables: integer("discovered_tables").default(0).notNull(),
+  dsrReceived: integer("dsr_received").default(0).notNull(),
+  dsrCompleted: integer("dsr_completed").default(0).notNull(),
+  breachCount: integer("breach_count").default(0).notNull(),
+  activeConsents: integer("active_consents").default(0).notNull(),
+  snapshotAt: timestamp("snapshot_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// سجل تشغيل ETL
+export const dwEtlLog = pgTable("dw_etl_log", {
+  id: serial("id").primaryKey(),
+  runType: varchar("run_type", { length: 50 }).notNull(),
+  status: varchar("status", { length: 20 }).default("running").notNull(),
+  recordsProcessed: integer("records_processed").default(0),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+});
