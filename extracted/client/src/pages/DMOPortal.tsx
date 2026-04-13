@@ -346,7 +346,12 @@ export default function DMOPortal() {
           headers: { 'Authorization': `Bearer ${token}`, 'X-CSRF-Token': csrfToken },
           body: formData,
         });
-        if (!res.ok) throw new Error('فشل رفع الدليل');
+        if (!res.ok) {
+          const errText = await res.text();
+          let errMsg = 'فشل رفع الدليل';
+          try { const parsed = JSON.parse(errText); if (parsed.error) errMsg = parsed.error; } catch {}
+          throw new Error(errMsg);
+        }
         return res.json();
       }
       const payload: any = { title: data.title };

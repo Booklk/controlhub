@@ -12830,6 +12830,10 @@ function registerMissingWorkflowRoutes(app: Express) {
         ? (PORTAL_TO_DEPT[portal] || null)
         : (PORTAL_TO_DEPT[userServerPortal] || user?.itDepartmentId || null);
 
+      // Department base paths for navigation (DMO uses /dmo, others use /department/*)
+      const DEPT_BASE_PATHS: Record<number, string> = { 5: '/dmo', 9: '/department/infrastructure', 10: '/department/cybersecurity', 11: '/department/digital-transformation', 12: '/department/support' };
+      const buildDeptHref = (id: number | null, suffix: string) => id && DEPT_BASE_PATHS[id] ? `${DEPT_BASE_PATHS[id]}/${suffix}` : `/it-director/${suffix}`;
+
       const sm = (text: string, keywords: string[]) =>
         keywords.some(k => text.includes(k.toLowerCase()));
 
@@ -12950,8 +12954,6 @@ function registerMissingWorkflowRoutes(app: Express) {
       // ─── WHAT SHOULD I DO NOW? (Actionable Priority List) ────────────────────
       else if (isActionable) {
         intent = 'actionable';
-        const DEPT_BASE_PATH: Record<number, string> = { 5: '/dmo', 9: '/department/infrastructure', 10: '/department/cybersecurity', 11: '/department/digital-transformation', 12: '/department/support' };
-        const getDeptPath = (id: number | null, suffix: string) => id && DEPT_BASE_PATH[id] ? `${DEPT_BASE_PATH[id]}/${suffix}` : `/it-director/${suffix}`;
         const now = new Date();
         const [allTickets, allTasks, allReferrals, incidentsData, vulnsData, serversData] = await Promise.all([
           safeQuery(() => deptId ? db.select().from(itTickets).where(and(eq(itTickets.departmentId, deptId), isNull(itTickets.deletedAt))) : db.select().from(itTickets).where(isNull(itTickets.deletedAt)), []),
@@ -12973,20 +12975,20 @@ function registerMissingWorkflowRoutes(app: Express) {
         if (critVulns.length > 0) actions2.push({ priority: 3, emoji: '⚠️', text: `${critVulns.length} ثغرة حرجة مفتوحة — معالجة خلال 72 ساعة`, href: '/department/cybersecurity/vulnerabilities', badge: 'مهم جداً' });
         // P4: Unacknowledged incoming referrals
         const unackRef = (allReferrals as any[]).filter((r: any) => r.toDepartmentId === deptId && r.status === 'pending' && !r.acknowledgedAt);
-        if (unackRef.length > 0) actions2.push({ priority: 4, emoji: '📨', text: `${unackRef.length} إحالة واردة لم يُؤكَّد استلامها بعد`, href: getDeptPath(deptId, 'referrals'), badge: 'ينتظر' });
+        if (unackRef.length > 0) actions2.push({ priority: 4, emoji: '📨', text: `${unackRef.length} إحالة واردة لم يُؤكَّد استلامها بعد`, href: buildDeptHref(deptId, 'referrals'), badge: 'ينتظر' });
         // P5: Critical tickets
         const critTickets = (allTickets as any[]).filter((t: any) => (t.priority === 'critical' || t.priority === 'urgent') && t.status !== 'closed' && t.status !== 'resolved');
         if (critTickets.length > 0) actions2.push({ priority: 5, emoji: '🎫', text: `${critTickets.length} تذاكر حرجة/عاجلة مفتوحة`, href: '/it/all-tickets', badge: 'أولوية عالية' });
         // P6: Overdue tasks
         const overdueTasks = (allTasks as any[]).filter((t: any) => t.dueDate && new Date(t.dueDate) < now && t.status !== 'completed');
-        if (overdueTasks.length > 0) actions2.push({ priority: 6, emoji: '⏰', text: `${overdueTasks.length} مهمة تجاوزت الموعد النهائي`, href: getDeptPath(deptId, 'tasks'), badge: 'متأخرة' });
+        if (overdueTasks.length > 0) actions2.push({ priority: 6, emoji: '⏰', text: `${overdueTasks.length} مهمة تجاوزت الموعد النهائي`, href: buildDeptHref(deptId, 'tasks'), badge: 'متأخرة' });
         // P7: Today's tasks due
         const todayEnd = new Date(now); todayEnd.setHours(23,59,59,999);
         const todayTasks = (allTasks as any[]).filter((t: any) => t.dueDate && new Date(t.dueDate) <= todayEnd && new Date(t.dueDate) >= now && t.status !== 'completed');
-        if (todayTasks.length > 0) actions2.push({ priority: 7, emoji: '📅', text: `${todayTasks.length} مهمة تنتهي اليوم`, href: getDeptPath(deptId, 'tasks'), badge: 'اليوم' });
+        if (todayTasks.length > 0) actions2.push({ priority: 7, emoji: '📅', text: `${todayTasks.length} مهمة تنتهي اليوم`, href: buildDeptHref(deptId, 'tasks'), badge: 'اليوم' });
         // P8: Escalated referrals
         const escalatedRef = (allReferrals as any[]).filter((r: any) => (r.escalationLevel || 0) > 0 && r.status === 'pending');
-        if (escalatedRef.length > 0) actions2.push({ priority: 8, emoji: '⬆️', text: `${escalatedRef.length} إحالة مُصعَّدة تحتاج قرار`, href: isAdminOrDirector ? '/it-director/referrals' : getDeptPath(deptId, 'referrals') });
+        if (escalatedRef.length > 0) actions2.push({ priority: 8, emoji: '⬆️', text: `${escalatedRef.length} إحالة مُصعَّدة تحتاج قرار`, href: isAdminOrDirector ? '/it-director/referrals' : buildDeptHref(deptId, 'referrals') });
 
         const sortedActions = actions2.sort((a, b) => a.priority - b.priority);
         data = { actionItems: sortedActions, totalItems: sortedActions.length };
@@ -13700,7 +13702,7 @@ function registerMissingWorkflowRoutes(app: Express) {
 
         suggestions = ['ماذا أفعل الآن؟', 'الإحالات غير المؤكدة', 'التذاكر الحرجة', 'حالة الخوادم'];
         if (downServers.length > 0) actions.push({ label: 'الخوادم المتوقفة', href: '/department/infrastructure/servers' });
-        if (escalatedReferrals.length > 0 || unackReferrals.length > 0) actions.push({ label: 'إدارة الإحالات', href: isAdminOrDirector ? '/it-director/referrals' : `/department/${Object.keys(PORTAL_TO_DEPT).find(k => PORTAL_TO_DEPT[k] === deptId)}/referrals` || '/it-director/referrals' });
+        if (escalatedReferrals.length > 0 || unackReferrals.length > 0) actions.push({ label: 'إدارة الإحالات', href: isAdminOrDirector ? '/it-director/referrals' : buildDeptHref(deptId, 'referrals') });
         if (criticalTickets.length > 0) actions.push({ label: 'التذاكر الحرجة', href: '/it/all-tickets' });
       }
 
