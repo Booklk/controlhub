@@ -959,6 +959,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Approve / reject evidence
   app.put("/api/evidences/:id/review", authenticateToken, async (req: any, res) => {
     try {
+      const DMO_REVIEW_ROLES = ['system_admin', 'admin', 'it_director', 'dmo_manager'];
+      if (!DMO_REVIEW_ROLES.includes(req.user?.role)) {
+        return res.status(403).json({ error: 'صلاحية مراجعة الأدلة مقتصرة على مدير مكتب إدارة البيانات' });
+      }
       const id = parseId(req.params.id, res);
       if (!id) return;
       const { status, reviewNotes } = req.body;
@@ -4104,7 +4108,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: 'الاتفاقية غير موجودة' });
       }
       const slaUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
-      const slaIsAdminOrDir = req.user.role === 'system_admin' || req.user.portal === 'it_director';
+      const slaIsAdminOrDir = req.user.role === 'system_admin' || req.user.role === 'it_director' || req.user.role === 'admin';
       if (existing.departmentId && existing.departmentId !== slaUserDeptId && !slaIsAdminOrDir) {
         return res.status(403).json({ error: 'لا يمكنك تعديل هذه الاتفاقية' });
       }
@@ -4299,8 +4303,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: 'المقال غير موجود' });
       }
       const kbPutUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
-      const kbPutIsAdminOrDir = req.user.role === 'system_admin' || req.user.portal === 'it_director';
-      if (existing.departmentId && existing.departmentId !== kbPutUserDeptId && !kbPutIsAdminOrDir) {
+      const kbPutIsAdminOrDir = req.user.role === 'system_admin' || req.user.role === 'it_director' || req.user.role === 'admin';
+      if (!kbPutIsAdminOrDir && (!existing.departmentId || existing.departmentId !== kbPutUserDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك تعديل هذا المقال' });
       }
 
