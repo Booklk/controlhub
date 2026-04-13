@@ -33,10 +33,13 @@ interface TokenPair {
 // Get JWT secret with fallback for development
 function getJWTSecret(): string {
   const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
-  if (!secret && process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET is required in production');
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL: JWT_SECRET environment variable is required');
+    }
+    return 'dev-secret-change-in-production';
   }
-  return secret || 'dev-secret-change-in-production';
+  return secret;
 }
 
 // Generate secure random token

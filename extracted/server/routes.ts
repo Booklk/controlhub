@@ -104,11 +104,17 @@ const JWT_ALGORITHM = 'HS512' as const;
 
 const getJWTSecret = (): string => {
   if (JWT_ACCESS_SECRET) return JWT_ACCESS_SECRET;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL: JWT_SECRET environment variable is required');
+  }
   return 'dev-only-unsafe-secret-do-not-use-in-production';
 };
 
 const getRefreshSecret = (): string => {
   if (JWT_REFRESH_SECRET) return JWT_REFRESH_SECRET;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL: JWT_REFRESH_SECRET environment variable is required');
+  }
   // Dev-only fallback with distinct derivation (not just + '-refresh')
   return (process.env.SESSION_SECRET || 'dev-session') + ':refresh-v2:' + (process.env.SESSION_SECRET?.slice(-4) || 'xxxx');
 };
