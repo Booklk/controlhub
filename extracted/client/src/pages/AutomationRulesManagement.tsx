@@ -133,7 +133,7 @@ export default function AutomationRulesManagement() {
       setIsDialogOpen(false);
       setEditingRule(null);
     },
-    onError: () => toast({ title: "فشل في إنشاء القاعدة", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "فشل في إنشاء القاعدة", description: error.message, variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
@@ -147,7 +147,7 @@ export default function AutomationRulesManagement() {
       setIsDialogOpen(false);
       setEditingRule(null);
     },
-    onError: () => toast({ title: "فشل في تحديث القاعدة", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "فشل في تحديث القاعدة", description: error.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({

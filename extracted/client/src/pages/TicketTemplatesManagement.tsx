@@ -115,8 +115,9 @@ export default function TicketTemplatesManagement() {
       toast({ title: "تم إنشاء القالب بنجاح" });
       setIsDialogOpen(false);
       setEditingTemplate(null);
+      setChecklist([]);
     },
-    onError: () => toast({ title: "فشل في إنشاء القالب", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "فشل في إنشاء القالب", description: error.message, variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
@@ -129,8 +130,9 @@ export default function TicketTemplatesManagement() {
       toast({ title: "تم تحديث القالب بنجاح" });
       setIsDialogOpen(false);
       setEditingTemplate(null);
+      setChecklist([]);
     },
-    onError: () => toast({ title: "فشل في تحديث القالب", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "فشل في تحديث القالب", description: error.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({

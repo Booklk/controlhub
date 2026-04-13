@@ -110,8 +110,8 @@ export default function BusinessDepartmentsManagement() {
       setIsAddOpen(false);
       addForm.reset();
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إضافة الإدارة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في إضافة الإدارة', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -127,8 +127,8 @@ export default function BusinessDepartmentsManagement() {
       setSelectedDepartment(null);
       editForm.reset();
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تحديث الإدارة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في تحديث الإدارة', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -141,8 +141,8 @@ export default function BusinessDepartmentsManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/departments'] });
       toast({ title: 'تم حذف الإدارة بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في حذف الإدارة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في حذف الإدارة', description: error.message, variant: 'destructive' });
     },
   });
 

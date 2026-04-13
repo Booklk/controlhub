@@ -119,7 +119,10 @@ export default function RegulatoryCompliancePage({ navGroups, portalName, portal
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/regulatory-controls', data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('POST', '/api/regulatory-controls', data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/regulatory-controls'] });
       invalidateRelatedQueries('/api/regulatory-controls');
@@ -127,23 +130,30 @@ export default function RegulatoryCompliancePage({ navGroups, portalName, portal
       setShowAddDialog(false);
       resetForm();
     },
-    onError: () => toast({ title: 'خطأ في إضافة الضابط', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'خطأ في إضافة الضابط', description: error.message, variant: 'destructive' }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest('PATCH', `/api/regulatory-controls/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest('PATCH', `/api/regulatory-controls/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/regulatory-controls'] });
       invalidateRelatedQueries('/api/regulatory-controls');
       toast({ title: 'تم تحديث الضابط بنجاح' });
       setShowEditDialog(false);
       setSelectedControl(null);
+      resetForm();
     },
-    onError: () => toast({ title: 'خطأ في تحديث الضابط', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'خطأ في تحديث الضابط', description: error.message, variant: 'destructive' }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/regulatory-controls/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/regulatory-controls/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/regulatory-controls'] });
       invalidateRelatedQueries('/api/regulatory-controls');
@@ -151,7 +161,7 @@ export default function RegulatoryCompliancePage({ navGroups, portalName, portal
       setShowDeleteDialog(false);
       setSelectedControl(null);
     },
-    onError: () => toast({ title: 'خطأ في حذف الضابط', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'خطأ في حذف الضابط', description: error.message, variant: 'destructive' }),
   });
 
   const bulkImportMutation = useMutation({
