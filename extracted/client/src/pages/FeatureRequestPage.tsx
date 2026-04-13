@@ -141,7 +141,7 @@ export default function FeatureRequestPage({ navGroups, portalName, portalId }: 
             <p className="text-sm text-white/50 mt-1">أرسل طلب ميزة جديدة، بلّغ عن مشكلة تقنية، أو أبلغ عن ميزة غير مكتملة</p>
           </div>
           <Button
-            onClick={() => setDialogOpen(true)}
+            onClick={() => { setEditingItem(null); setFormData({ title: '', description: '', type: 'feature', priority: 'medium' }); setDialogOpen(true); }}
             className="hub-btn-gold font-semibold"
             data-testid="button-new-request"
           >
@@ -217,6 +217,24 @@ export default function FeatureRequestPage({ navGroups, portalName, portalId }: 
                           )}
                         </div>
                       </div>
+                      {user?.id === request.requestedById && (
+                        <button
+                          onClick={() => {
+                            setEditingItem(request);
+                            setFormData({
+                              title: request.title,
+                              description: request.description || '',
+                              type: request.type,
+                              priority: request.priority,
+                            });
+                            setDialogOpen(true);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors flex-shrink-0"
+                          data-testid={`button-edit-request-${request.id}`}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -226,12 +244,11 @@ export default function FeatureRequestPage({ navGroups, portalName, portalId }: 
         )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditingItem(null); setFormData({ title: '', description: '', type: 'feature', priority: 'medium' }); } }}>
         <DialogContent className="hub-card border-gold/20 text-white max-w-lg" dir="rtl" data-testid="dialog-new-request">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 hub-stat-gold" />
-              طلب جديد
+              {editingItem ? <><Pencil className="w-5 h-5 hub-stat-gold" />تعديل الطلب</> : <><FileText className="w-5 h-5 hub-stat-gold" />طلب جديد</>}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
@@ -297,21 +314,23 @@ export default function FeatureRequestPage({ navGroups, portalName, portalId }: 
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setDialogOpen(false)} className="text-white/50" data-testid="button-cancel-request">
+            <Button variant="ghost" onClick={() => { setDialogOpen(false); setEditingItem(null); setFormData({ title: '', description: '', type: 'feature', priority: 'medium' }); }} className="text-white/50" data-testid="button-cancel-request">
               إلغاء
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={createMutation.isPending}
+              disabled={editingItem ? updateMutation.isPending : createMutation.isPending}
               className="hub-btn-gold font-semibold"
               data-testid="button-submit-request"
             >
-              {createMutation.isPending ? (
+              {(editingItem ? updateMutation.isPending : createMutation.isPending) ? (
                 <Loader2 className="w-4 h-4 animate-spin ml-2" />
+              ) : editingItem ? (
+                <Pencil className="w-4 h-4 ml-2" />
               ) : (
                 <Send className="w-4 h-4 ml-2" />
               )}
-              إرسال الطلب
+              {editingItem ? 'تحديث الطلب' : 'إرسال الطلب'}
             </Button>
           </DialogFooter>
         </DialogContent>
