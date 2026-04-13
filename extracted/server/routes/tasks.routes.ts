@@ -551,7 +551,7 @@ export function registerTaskRoutes(app: Express) {
       invalidateDashboardCaches();
       res.json(task);
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في تحديث حالة المهمة' });
+      handleDbError(error, res, 'تحديث حالة المهمة');
     }
   });
 
@@ -763,7 +763,7 @@ export function registerTaskRoutes(app: Express) {
       invalidateDashboardCaches();
       res.json({ updated: succeeded.length, failed: failed.length > 0 ? failed : undefined });
     } catch (error) {
-      res.status(500).json({ error: 'خطأ في التحديث الجماعي' });
+      handleDbError(error, res, 'التحديث الجماعي لحالة المهام');
     }
   });
 

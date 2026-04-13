@@ -137,7 +137,7 @@ export function registerAdminRoutes(app: Express) {
 
       res.json({ success: true, message: 'تم إلغاء جميع الجلسات بنجاح' });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في إلغاء الجلسات' });
+      handleDbError(error, res, 'إلغاء جلسات المستخدم');
     }
   });
 
@@ -170,7 +170,7 @@ export function registerAdminRoutes(app: Express) {
 
       res.json({ success: true, message: 'تم إرسال رابط إعادة ضبط كلمة المرور عبر البريد الإلكتروني' });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في إعادة ضبط كلمة المرور' });
+      handleDbError(error, res, 'إعادة ضبط كلمة المرور');
     }
   });
 
@@ -279,7 +279,7 @@ export function registerAdminRoutes(app: Express) {
       res.json({ ...sanitizeUser(user), activationEmailSent: emailSent });
     } catch (error) {
       logger.error('Create user error:', { error });
-      res.status(500).json({ error: 'حدث خطأ في إنشاء المستخدم' });
+      handleDbError(error, res, 'إنشاء المستخدم');
     }
   });
 
@@ -317,7 +317,7 @@ export function registerAdminRoutes(app: Express) {
       invalidateDashboardCaches();
       res.json(sanitizeUser(user));
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في تحديث المستخدم' });
+      handleDbError(error, res, 'تبديل حالة المستخدم');
     }
   });
 
@@ -376,7 +376,7 @@ export function registerAdminRoutes(app: Express) {
       res.json(sanitizeUser(user as any));
     } catch (error) {
       logger.error('Error updating user:', { error });
-      res.status(500).json({ error: 'حدث خطأ في تحديث المستخدم' });
+      handleDbError(error, res, 'تحديث المستخدم');
     }
   });
 
@@ -413,7 +413,7 @@ export function registerAdminRoutes(app: Express) {
       res.json({ success: true, message: 'تم حذف المستخدم بنجاح' });
     } catch (error) {
       logger.error('Error deleting user:', { error });
-      res.status(500).json({ error: 'حدث خطأ في حذف المستخدم' });
+      handleDbError(error, res, 'حذف المستخدم');
     }
   });
 
@@ -480,7 +480,7 @@ export function registerAdminRoutes(app: Express) {
       res.status(201).json(department);
     } catch (error) {
       logger.error('Error creating department:', { error });
-      res.status(500).json({ error: 'حدث خطأ في إنشاء الإدارة' });
+      handleDbError(error, res, 'إنشاء الإدارة');
     }
   });
 
@@ -512,7 +512,7 @@ export function registerAdminRoutes(app: Express) {
       res.json(department);
     } catch (error) {
       logger.error('Error updating department:', { error });
-      res.status(500).json({ error: 'حدث خطأ في تحديث الإدارة' });
+      handleDbError(error, res, 'تحديث الإدارة');
     }
   });
 
@@ -544,7 +544,7 @@ export function registerAdminRoutes(app: Express) {
       res.json({ success: true, message: 'تم حذف الإدارة بنجاح' });
     } catch (error) {
       logger.error('Error deleting department:', { error });
-      res.status(500).json({ error: 'حدث خطأ في حذف الإدارة' });
+      handleDbError(error, res, 'حذف الإدارة');
     }
   });
 
@@ -572,7 +572,7 @@ export function registerAdminRoutes(app: Express) {
       }
       res.json({ success: true, message: isAdmin ? 'تم إنهاء جميع الجلسات بنجاح' : 'تم إنهاء جلساتك بنجاح' });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنهاء جميع الجلسات');
     }
   });
 
@@ -583,7 +583,7 @@ export function registerAdminRoutes(app: Express) {
       await storage.deleteSession(id);
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنهاء الجلسة');
     }
   });
 
@@ -812,7 +812,7 @@ export function registerAdminRoutes(app: Express) {
       await storage.markNotificationAsRead(notifId);
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث حالة الإشعار');
     }
   });
 
@@ -821,7 +821,7 @@ export function registerAdminRoutes(app: Express) {
       await storage.markAllNotificationsAsRead((req as any).user.id);
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث جميع الإشعارات كمقروءة');
     }
   });
 
@@ -830,7 +830,7 @@ export function registerAdminRoutes(app: Express) {
       await db.delete(notifications).where(eq(notifications.userId, req.user.id));
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف جميع الإشعارات');
     }
   });
 
@@ -845,7 +845,7 @@ export function registerAdminRoutes(app: Express) {
       await db.delete(notifications).where(eq(notifications.id, notifId));
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف الإشعار');
     }
   });
 

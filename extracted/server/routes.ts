@@ -7549,7 +7549,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.delete(digitalInitiatives).where(eq(digitalInitiatives.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف المبادرة الرقمية');
     }
   });
 
@@ -7581,7 +7581,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json(application);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء التطبيق الرقمي');
     }
   });
 
@@ -7602,7 +7602,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [updated] = await db.select().from(digitalApplications).where(eq(digitalApplications.id, id));
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث التطبيق الرقمي');
     }
   });
 
@@ -7613,7 +7613,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.delete(digitalApplications).where(eq(digitalApplications.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف التطبيق الرقمي');
     }
   });
 
@@ -7642,7 +7642,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json(service);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء الخدمة السحابية');
     }
   });
 
@@ -7660,7 +7660,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [updated] = await db.select().from(cloudServices).where(eq(cloudServices.id, id));
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث الخدمة السحابية');
     }
   });
 
@@ -7671,7 +7671,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.delete(cloudServices).where(eq(cloudServices.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف الخدمة السحابية');
     }
   });
 
@@ -7701,7 +7701,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json(vuln);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء الثغرة الأمنية');
     }
   });
 
@@ -7714,7 +7714,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [updated] = await db.select().from(securityVulnerabilities).where(eq(securityVulnerabilities.id, id));
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث الثغرة الأمنية');
     }
   });
 
@@ -7725,7 +7725,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.delete(securityVulnerabilities).where(eq(securityVulnerabilities.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف الثغرة الأمنية');
     }
   });
 
@@ -7758,7 +7758,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json(threat);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء التهديد الأمني');
     }
   });
 
@@ -7783,7 +7783,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [updated] = await db.select().from(securityThreats).where(eq(securityThreats.id, id));
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث التهديد الأمني');
     }
   });
 
@@ -7806,7 +7806,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف التهديد الأمني');
     }
   });
 
@@ -7824,7 +7824,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [updated] = await db.select().from(securityIncidents).where(eq(securityIncidents.id, id));
       res.json(updated || { success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث الحادثة الأمنية');
     }
   });
 
@@ -7835,7 +7835,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.delete(securityIncidents).where(eq(securityIncidents.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف الحادثة الأمنية');
     }
   });
 
@@ -7869,7 +7869,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json(assessment);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء تقييم المخاطر');
     }
   });
 
@@ -7882,7 +7882,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [updated] = await db.select().from(securityRiskAssessments).where(eq(securityRiskAssessments.id, id));
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث تقييم المخاطر');
     }
   });
 
@@ -7893,7 +7893,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.delete(securityRiskAssessments).where(eq(securityRiskAssessments.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف تقييم المخاطر');
     }
   });
 
@@ -7932,7 +7932,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json({ id: result.id });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء تقييم الرضا');
     }
   });
 
@@ -7983,7 +7983,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).where(eq(itAssets.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تعيين الأصل التقني');
     }
   });
 
@@ -8013,7 +8013,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json({ id: metric.id });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء مؤشر الأداء');
     }
   });
 
@@ -8038,7 +8038,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [metric] = await db.insert(systemPerformanceMetrics).values(perfData).returning();
       res.json({ id: metric.id });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء مقياس الأداء');
     }
   });
 
@@ -8318,7 +8318,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }))
       });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'اكتشاف الجداول');
     }
   });
 
@@ -8365,7 +8365,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [table] = await db.insert(discoveredTables).values(tableData).returning();
       res.json({ id: table.id });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء الجدول المكتشف');
     }
   });
 
@@ -8376,7 +8376,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.update(discoveredTables).set(stripProtectedFields(req.body)).where(eq(discoveredTables.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث الجدول المكتشف');
     }
   });
 
@@ -8399,7 +8399,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }).returning();
       res.json({ id: mapping.id });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'إنشاء تدفق البيانات');
     }
   });
 
@@ -8410,7 +8410,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.update(dataFlowMappings).set(stripProtectedFields(req.body)).where(eq(dataFlowMappings.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'تحديث تدفق البيانات');
     }
   });
 
@@ -8421,7 +8421,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await db.delete(dataFlowMappings).where(eq(dataFlowMappings.id, id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+      handleDbError(error, res, 'حذف تدفق البيانات');
     }
   });
 
