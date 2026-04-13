@@ -293,6 +293,7 @@ export const dmoNavGroups: NavGroup[] = [
     icon: Database,
     items: [
       { title: 'فهرس البيانات', href: '/dmo/data-catalog', icon: BookOpen, resource: RESOURCES.DATA_CATALOG },
+      { title: 'مستودع البيانات التحليلي', href: '/dmo/data-warehouse', icon: Database },
       { title: 'أصول البيانات', href: '/dmo/data-assets', icon: FolderOpen },
       { title: 'قاموس البيانات', href: '/dmo/data-dictionary', icon: FileText },
       { title: 'تصنيفات البيانات', href: '/dmo/data-classifications', icon: Layers },

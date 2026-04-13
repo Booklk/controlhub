@@ -58,6 +58,7 @@ const CybersecurityThreats = lazy(() => import("@/pages/CybersecurityThreats"));
 const SecurityIncidentsPage = lazy(() => import("@/pages/SecurityIncidentsPage"));
 const SecurityVulnerabilitiesPage = lazy(() => import("@/pages/SecurityVulnerabilitiesPage"));
 const DataCatalogPage = lazy(() => import("@/pages/DataCatalogPage"));
+const DataWarehousePage = lazy(() => import("@/pages/DataWarehousePage"));
 const DepartmentAssetsPage = lazy(() => import("@/pages/DepartmentAssetsPage"));
 const DigitalInitiatives = lazy(() => import("@/pages/DigitalInitiatives"));
 const DigitalApplicationsPage = lazy(() => import("@/pages/DigitalApplicationsPage"));
@@ -865,6 +866,9 @@ function Router() {
 
       <Route path="/dmo/data-catalog">
         <ProtectedRoute component={DataCatalogPage} allowedPortals={DMO_PORTALS} />
+      </Route>
+      <Route path="/dmo/data-warehouse">
+        <ProtectedRoute component={DataWarehousePage} allowedPortals={DMO_PORTALS} />
       </Route>
 
       <Route path="/dmo/knowledge-base">
