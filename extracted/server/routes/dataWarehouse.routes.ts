@@ -517,6 +517,85 @@ export function registerDataWarehouseRoutes(app: Express) {
     }
   });
 
+  // ==================== 9. تحليلات المصادر الخارجية ====================
+  app.get("/api/data-warehouse/external-sources", authenticateToken, requirePortal(DW_ALLOWED_PORTALS), async (req: any, res) => {
+    try {
+      const cacheKey = 'dw_external_sources';
+      const cached = cache.get<any>(cacheKey);
+      if (cached) return res.json(cached);
+
+      const result = await db.execute(sql`
+        SELECT
+          s.id, s.source_name, s.source_type, s.host, s.database_name, s.is_active, s.last_sync_at,
+          f.tables_count, f.total_rows, f.columns_count, f.connection_status, f.response_time_ms, f.data_quality_score,
+          f.snapshot_at
+        FROM dw_dim_source s
+        LEFT JOIN LATERAL (
+          SELECT * FROM dw_fact_external_source
+          WHERE source_id = s.id
+          ORDER BY snapshot_at DESC LIMIT 1
+        ) f ON true
+        WHERE s.is_active = true
+        ORDER BY s.source_name
+      `);
+      const rows = (result as any).rows || result;
+      cache.set(cacheKey, rows, 3 * 60 * 1000);
+      res.json(rows);
+    } catch (error) {
+      logger.error('[DW] External sources error:', { error: (error as Error).message });
+      res.status(500).json({ error: 'حدث خطأ في جلب بيانات المصادر الخارجية' });
+    }
+  });
+
+  // ==================== 10. تاريخ مصدر خارجي محدد ====================
+  app.get("/api/data-warehouse/external-sources/:sourceId/history", authenticateToken, requirePortal(DW_ALLOWED_PORTALS), async (req: any, res) => {
+    try {
+      const sourceId = parseInt(req.params.sourceId);
+      if (isNaN(sourceId)) return res.status(400).json({ error: 'معرف المصدر غير صالح' });
+
+      const result = await db.execute(sql`
+        SELECT
+          d.full_date, d.month_ar, d.year,
+          f.tables_count, f.total_rows, f.columns_count,
+          f.connection_status, f.response_time_ms, f.data_quality_score
+        FROM dw_fact_external_source f
+        JOIN dw_dim_date d ON f.date_id = d.id
+        WHERE f.source_id = ${sourceId}
+        ORDER BY d.full_date DESC
+        LIMIT 90
+      `);
+      res.json((result as any).rows || result);
+    } catch (error) {
+      res.status(500).json({ error: 'حدث خطأ في جلب تاريخ المصدر' });
+    }
+  });
+
+  // ==================== 11. ملخص كل المصادر ====================
+  app.get("/api/data-warehouse/sources-summary", authenticateToken, requirePortal(DW_ALLOWED_PORTALS), async (req: any, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM dw_dim_source WHERE is_active = true) as total_sources,
+          (SELECT COUNT(DISTINCT source_type) FROM dw_dim_source WHERE is_active = true) as source_types,
+          (SELECT COUNT(*)::int FROM dw_fact_external_source WHERE connection_status = 'connected' AND snapshot_at > NOW() - INTERVAL '1 day') as connected_today,
+          (SELECT COUNT(*)::int FROM dw_fact_external_source WHERE connection_status IN ('disconnected','error') AND snapshot_at > NOW() - INTERVAL '1 day') as failed_today,
+          (SELECT COALESCE(SUM(tables_count), 0)::int FROM dw_fact_external_source f WHERE f.id IN (SELECT MAX(id) FROM dw_fact_external_source GROUP BY source_id)) as total_external_tables,
+          (SELECT COALESCE(SUM(total_rows), 0)::bigint FROM dw_fact_external_source f WHERE f.id IN (SELECT MAX(id) FROM dw_fact_external_source GROUP BY source_id)) as total_external_rows,
+          (SELECT COALESCE(SUM(columns_count), 0)::int FROM dw_fact_external_source f WHERE f.id IN (SELECT MAX(id) FROM dw_fact_external_source GROUP BY source_id)) as total_external_columns,
+          (SELECT COUNT(*)::int FROM dw_etl_log WHERE status = 'success' AND started_at > NOW() - INTERVAL '7 days') as successful_runs_7d,
+          (SELECT COUNT(*)::int FROM dw_etl_log WHERE status = 'failed' AND started_at > NOW() - INTERVAL '7 days') as failed_runs_7d
+      `);
+      const r = (result as any).rows?.[0] || (result as any)[0] || {};
+      res.json({
+        sources: { total: Number(r.total_sources)||0, types: Number(r.source_types)||0, connectedToday: Number(r.connected_today)||0, failedToday: Number(r.failed_today)||0 },
+        data: { tables: Number(r.total_external_tables)||0, rows: Number(r.total_external_rows)||0, columns: Number(r.total_external_columns)||0 },
+        etl: { successfulRuns7d: Number(r.successful_runs_7d)||0, failedRuns7d: Number(r.failed_runs_7d)||0 },
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'حدث خطأ في ملخص المصادر' });
+    }
+  });
+
   // بدء جدولة ETL
   startETLScheduler();
 

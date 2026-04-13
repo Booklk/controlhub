@@ -2807,3 +2807,43 @@ export const dwEtlLog = pgTable("dw_etl_log", {
   completedAt: timestamp("completed_at"),
   durationMs: integer("duration_ms"),
 });
+
+// بُعد المصادر الخارجية
+export const dwDimSource = pgTable("dw_dim_source", {
+  id: serial("id").primaryKey(),
+  connectionId: integer("connection_id").unique().references(() => databaseConnections.id, { onDelete: "set null" }),
+  sourceName: varchar("source_name", { length: 200 }).notNull(),
+  sourceType: varchar("source_type", { length: 50 }).notNull(),
+  host: varchar("host", { length: 255 }),
+  databaseName: varchar("database_name", { length: 200 }),
+  isActive: boolean("is_active").default(true).notNull(),
+  lastSyncAt: timestamp("last_sync_at"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// حقائق المصادر الخارجية (لقطات يومية)
+export const dwFactExternalSource = pgTable("dw_fact_external_source", {
+  id: serial("id").primaryKey(),
+  dateId: integer("date_id").notNull().references(() => dwDimDate.id),
+  sourceId: integer("source_id").notNull().references(() => dwDimSource.id),
+  tablesCount: integer("tables_count").default(0).notNull(),
+  totalRows: bigint("total_rows", { mode: "number" }).default(0),
+  columnsCount: integer("columns_count").default(0).notNull(),
+  connectionStatus: varchar("connection_status", { length: 20 }).default("unknown"),
+  responseTimeMs: integer("response_time_ms"),
+  dataQualityScore: integer("data_quality_score"),
+  snapshotAt: timestamp("snapshot_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// بيانات مسحوبة من مصادر خارجية (staging)
+export const dwExternalData = pgTable("dw_external_data", {
+  id: serial("id").primaryKey(),
+  sourceId: integer("source_id").notNull().references(() => dwDimSource.id),
+  tableName: varchar("table_name", { length: 200 }).notNull(),
+  rowCount: bigint("row_count", { mode: "number" }).default(0),
+  columnCount: integer("column_count").default(0),
+  sampleData: jsonb("sample_data"),
+  schemaInfo: jsonb("schema_info"),
+  qualityMetrics: jsonb("quality_metrics"),
+  extractedAt: timestamp("extracted_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});

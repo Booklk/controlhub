@@ -353,6 +353,107 @@ export async function etlDataGovernanceMonthly(): Promise<number> {
 }
 
 // ==================== تشغيل ETL الكامل ====================
+// ==================== 9. ETL: المصادر الخارجية ====================
+export async function etlExternalSources(): Promise<number> {
+  const start = Date.now();
+  let total = 0;
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [dateRow] = await db.execute(sql`SELECT id FROM dw_dim_date WHERE full_date::date = ${today}::date LIMIT 1`);
+    const dateId = (dateRow as any).rows?.[0]?.id || (dateRow as any)[0]?.id;
+    if (!dateId) return 0;
+
+    // جلب كل الاتصالات الخارجية المسجلة
+    const connectionsResult = await db.execute(sql`
+      SELECT id, name, database_type, host, database_name, port, username, encrypted_password, status
+      FROM database_connections WHERE deleted_at IS NULL
+    `);
+    const connections = ((connectionsResult as any).rows || connectionsResult) as any[];
+
+    for (const conn of connections) {
+      try {
+        // تسجيل/تحديث بُعد المصدر
+        await db.execute(sql`
+          INSERT INTO dw_dim_source (connection_id, source_name, source_type, host, database_name, is_active)
+          VALUES (${conn.id}, ${conn.name}, ${conn.database_type}, ${conn.host}, ${conn.database_name}, true)
+          ON CONFLICT (connection_id) DO UPDATE SET
+            source_name = ${conn.name}, source_type = ${conn.database_type},
+            host = ${conn.host}, database_name = ${conn.database_name},
+            last_sync_at = NOW()
+        `);
+
+        // جلب source_id
+        const [srcRow] = await db.execute(sql`
+          SELECT id FROM dw_dim_source WHERE connection_id = ${conn.id} LIMIT 1
+        `);
+        const sourceId = (srcRow as any).rows?.[0]?.id || (srcRow as any)[0]?.id;
+        if (!sourceId) continue;
+
+        // جلب إحصائيات من الجداول المكتشفة
+        const [stats] = await db.execute(sql`
+          SELECT
+            COUNT(DISTINCT dt.id)::int as tables_count,
+            COALESCE(SUM(dt.row_count), 0)::bigint as total_rows,
+            COUNT(DISTINCT dc.id)::int as columns_count
+          FROM discovered_tables dt
+          LEFT JOIN discovered_columns dc ON dc.table_id = dt.id
+          WHERE dt.connection_id = ${conn.id}
+        `);
+        const s = (stats as any).rows?.[0] || (stats as any) || {};
+
+        // محاولة فحص اتصال حقيقي
+        let connStatus = conn.status || 'unknown';
+        let responseTime: number | null = null;
+        try {
+          const { testConnection: testConn } = await import('../external-db');
+          const { decryptPassword } = await import('../integrations/dataDiscoveryEngine');
+          const password = conn.encrypted_password ? decryptPassword(conn.encrypted_password) : '';
+          const connStart = Date.now();
+          const testResult = await testConn({
+            databaseType: conn.database_type,
+            host: conn.host,
+            port: conn.port || 3306,
+            databaseName: conn.database_name,
+            username: conn.username,
+            password,
+          });
+          responseTime = Date.now() - connStart;
+          connStatus = testResult.success ? 'connected' : 'disconnected';
+        } catch {
+          connStatus = 'error';
+        }
+
+        // حفظ لقطة يومية
+        await db.execute(sql`
+          INSERT INTO dw_fact_external_source (date_id, source_id, tables_count, total_rows, columns_count, connection_status, response_time_ms)
+          VALUES (${dateId}, ${sourceId}, ${Number(s.tables_count)||0}, ${Number(s.total_rows)||0}, ${Number(s.columns_count)||0}, ${connStatus}, ${responseTime})
+        `);
+
+        // تحديث حالة الاتصال
+        await db.execute(sql`UPDATE database_connections SET status = ${connStatus}, updated_at = NOW() WHERE id = ${conn.id}`);
+
+        total++;
+        logger.info(`ETL: Source "${conn.name}" (${conn.database_type}) - ${connStatus}`, {
+          tables: Number(s.tables_count) || 0,
+          rows: Number(s.total_rows) || 0,
+          responseMs: responseTime,
+        });
+      } catch (srcErr) {
+        logger.warn(`ETL: Source "${conn.name}" failed`, { error: (srcErr as Error).message });
+      }
+    }
+
+    await logETLRun('external_sources', 'success', total, undefined, start);
+    return total;
+  } catch (error) {
+    logger.error('External sources ETL failed', { error: (error as Error).message });
+    await logETLRun('external_sources', 'failed', total, (error as Error).message, start);
+    return total;
+  }
+}
+
+// ==================== تشغيل ETL الكامل ====================
 export async function runFullETL(): Promise<{ success: boolean; results: Record<string, number>; duration: number }> {
   const start = Date.now();
   logger.info('Starting full ETL pipeline...');
@@ -362,8 +463,8 @@ export async function runFullETL(): Promise<{ success: boolean; results: Record<
     await seedDateDimension(2);
     await seedDepartmentDimension();
 
-    // تشغيل ETL
-    const results = {
+    // تشغيل ETL - المصادر الداخلية
+    const results: Record<string, number> = {
       ticketsDaily: await etlTicketsDaily(),
       tasksDaily: await etlTasksDaily(),
       projectsMonthly: await etlProjectsMonthly(),
@@ -371,6 +472,14 @@ export async function runFullETL(): Promise<{ success: boolean; results: Record<
       securityDaily: await etlSecurityDaily(),
       dataGovernanceMonthly: await etlDataGovernanceMonthly(),
     };
+
+    // ETL - المصادر الخارجية
+    try {
+      results.externalSources = await etlExternalSources();
+    } catch (extErr) {
+      logger.warn('External sources ETL skipped', { error: (extErr as Error).message });
+      results.externalSources = 0;
+    }
 
     const duration = Date.now() - start;
     logger.info(`Full ETL completed in ${duration}ms`, results);
