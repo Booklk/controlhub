@@ -125,7 +125,8 @@ export default function DataStewardPortal() {
 
   const sendResponseMutation = useMutation({
     mutationFn: async ({ requestId, message, attachments }: { requestId: number; message: string; attachments?: FileAttachmentData[] }) => {
-      return apiRequest("POST", `/api/dmo-requests/${requestId}/responses`, { message, attachments });
+      const res = await apiRequest("POST", `/api/dmo-requests/${requestId}/responses`, { message, attachments });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "تم إرسال الرد بنجاح" });
@@ -133,19 +134,23 @@ export default function DataStewardPortal() {
       setResponseAttachments([]);
       queryClient.invalidateQueries({ queryKey: ["/api/dmo-requests", selectedRequest?.id] });
     },
-    onError: () => {
-      toast({ title: "حدث خطأ", description: "فشل في إرسال الرد", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ", description: error.message, variant: "destructive" });
     },
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ requestId, status }: { requestId: number; status: string }) => {
-      return apiRequest("PUT", `/api/dmo-requests/${requestId}/status`, { status });
+      const res = await apiRequest("PUT", `/api/dmo-requests/${requestId}/status`, { status });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "تم تحديث الحالة بنجاح" });
       queryClient.invalidateQueries({ queryKey: ["/api/dmo-requests/my-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dmo-requests", selectedRequest?.id] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "حدث خطأ في تحديث الحالة", description: error.message, variant: "destructive" });
     },
   });
 

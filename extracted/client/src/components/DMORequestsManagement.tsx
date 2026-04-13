@@ -107,8 +107,8 @@ export default function DMORequestsManagement() {
       setIsAddOpen(false);
       resetForm();
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إرسال الطلب', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في إرسال الطلب', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -123,8 +123,8 @@ export default function DMORequestsManagement() {
       setIsEditOpen(false);
       setSelectedRequest(null);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تحديث الطلب', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في تحديث الطلب', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -137,8 +137,8 @@ export default function DMORequestsManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/dmo-requests'] });
       toast({ title: 'تم حذف الطلب بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في حذف الطلب', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في حذف الطلب', description: error.message, variant: 'destructive' });
     }
   });
 

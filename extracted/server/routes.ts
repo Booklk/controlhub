@@ -426,10 +426,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (cached) return res.json(cached);
 
       const PORTAL_TO_DEPT: Record<string, number> = {
-        infrastructure: 9, cybersecurity: 10, digital_transformation: 11, support: 12
+        infrastructure: 9, cybersecurity: 10, digital_transformation: 11, support: 12, dmo: 5
       };
       const DEPT_NAMES: Record<number, string> = {
-        9: 'البنية التحتية', 10: 'الأمن السيبراني', 11: 'التحول الرقمي', 12: 'الدعم الفني'
+        5: 'مكتب إدارة البيانات', 9: 'البنية التحتية', 10: 'الأمن السيبراني', 11: 'التحول الرقمي', 12: 'الدعم الفني'
       };
       const isGlobal = ['system_admin', 'it_director'].includes(req.user.role);
       const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT[req.user.portal];
@@ -4450,11 +4450,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!isITDirector && !isAdmin && existing.departmentId !== userDeptId) {
         return res.status(403).json({ error: 'لا يمكنك تعديل هذا المستند' });
       }
-      await db.update(documents)
+      const [updated] = await db.update(documents)
         .set({ ...stripProtectedFields(req.body), updatedAt: new Date() })
-        .where(eq(documents.id, docId));
-      
-      res.json({ ...existing, ...req.body, updatedAt: new Date() });
+        .where(eq(documents.id, docId))
+        .returning();
+
+      res.json(updated);
     } catch (error) {
       res.status(500).json({ error: 'حدث خطأ في تحديث المستند' });
     }
@@ -6808,7 +6809,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         pendingAcknowledgment: pendingAck.length,
         escalated: escalated.length,
         // Per-department breakdown (incoming)
-        byDepartment: [9,10,11,12].map(id => ({
+        byDepartment: [5,9,10,11,12].map(id => ({
           deptId: id,
           incoming: all.filter((r: any) => r.toDepartmentId === id).length,
           pending: all.filter((r: any) => r.toDepartmentId === id && r.status === 'pending').length,
@@ -12043,7 +12044,7 @@ function registerMissingWorkflowRoutes(app: Express) {
       const user = await db.select().from(users).where(eq(users.id, userId)).then((r: any) => r[0]);
       if (!user) return res.status(404).json({ error: 'user not found' });
 
-      const PORTAL_TO_DEPT: Record<string, number> = { infrastructure: 9, cybersecurity: 10, digital_transformation: 11, support: 12 };
+      const PORTAL_TO_DEPT: Record<string, number> = { infrastructure: 9, cybersecurity: 10, digital_transformation: 11, support: 12, dmo: 5 };
       const isItDirector = portal === 'it-director' || portal === 'it_director';
       const deptId = user.itDepartmentId || PORTAL_TO_DEPT[portal] || null;
       const today = new Date();

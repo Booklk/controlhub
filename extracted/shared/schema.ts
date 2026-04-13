@@ -189,6 +189,7 @@ export const requirements = pgTable("requirements", {
   description: text("description"),
   priority: text("priority").default("medium").notNull(),
   complianceLevel: text("compliance_level").default("mandatory").notNull(),
+  status: text("status").default("pending").notNull(),
   evidenceType: text("evidence_type"),
   sortOrder: integer("sort_order").default(0).notNull(),
   isActive: boolean("is_active").default(true).notNull(),

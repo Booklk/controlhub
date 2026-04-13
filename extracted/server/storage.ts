@@ -665,12 +665,12 @@ export class DatabaseStorage implements IStorage {
   // Requirements
   async getRequirements(): Promise<Requirement[]> {
     const database = getDb();
-    return await database.select().from(requirements);
+    return await database.select().from(requirements).where(isNull(requirements.deletedAt));
   }
 
   async getRequirementsByDomain(domainId: number): Promise<Requirement[]> {
     const database = getDb();
-    return await database.select().from(requirements).where(eq(requirements.domainId, domainId));
+    return await database.select().from(requirements).where(and(eq(requirements.domainId, domainId), isNull(requirements.deletedAt)));
   }
 
   async getRequirementById(id: number): Promise<Requirement | undefined> {
@@ -682,17 +682,17 @@ export class DatabaseStorage implements IStorage {
   // Evidences
   async getEvidences(): Promise<Evidence[]> {
     const database = getDb();
-    return await database.select().from(evidences);
+    return await database.select().from(evidences).where(isNull(evidences.deletedAt));
   }
 
   async getEvidencesByRequirement(requirementId: number): Promise<Evidence[]> {
     const database = getDb();
-    return await database.select().from(evidences).where(eq(evidences.requirementId, requirementId));
+    return await database.select().from(evidences).where(and(eq(evidences.requirementId, requirementId), isNull(evidences.deletedAt)));
   }
 
   async getPendingEvidences(): Promise<Evidence[]> {
     const database = getDb();
-    return await database.select().from(evidences).where(eq(evidences.status, 'pending'));
+    return await database.select().from(evidences).where(and(eq(evidences.status, 'pending'), isNull(evidences.deletedAt)));
   }
 
   async getExpiringEvidences(days: number): Promise<Evidence[]> {

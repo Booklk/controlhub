@@ -118,6 +118,7 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [editingDoc, setEditingDoc] = useState<Document | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [newDocument, setNewDocument] = useState({
@@ -206,6 +207,85 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Document> }) => {
+      const res = await apiRequest('PUT', `/api/documents/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/documents?departmentId=${departmentId}`] });
+      setShowCreateDialog(false);
+      setEditingDoc(null);
+      setNewDocument({
+        title: '',
+        description: '',
+        category: 'policy',
+        dataClassification: 'internal',
+        fileName: '',
+        version: '1.0',
+        isConfidential: false,
+        tags: '',
+      });
+      toast({
+        title: "تم التحديث",
+        description: "تم تعديل المستند بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في تعديل المستند",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = (doc: Document) => {
+    setEditingDoc(doc);
+    setNewDocument({
+      title: doc.title,
+      description: doc.description || '',
+      category: doc.category,
+      dataClassification: doc.dataClassification,
+      fileName: doc.fileName,
+      version: doc.version,
+      isConfidential: doc.isConfidential,
+      tags: doc.tags ? doc.tags.join(', ') : '',
+    });
+    setSelectedFile(null);
+    setShowViewDialog(false);
+    setShowCreateDialog(true);
+  };
+
+  const handleDownload = async (doc: Document, preview = false) => {
+    try {
+      const res = await apiRequest('GET', `/api/documents/${doc.id}/download`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'فشل في تحميل الملف');
+      }
+      const contentType = res.headers.get('Content-Type') || doc.fileType || 'application/octet-stream';
+      const buffer = await res.arrayBuffer();
+      const blob = new Blob([buffer], { type: contentType });
+      const url = URL.createObjectURL(blob);
+      if (preview) {
+        window.open(url, '_blank');
+      } else {
+        const link = window.document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', doc.fileName || 'document');
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: error.message || (preview ? "الملف غير متوفر للعرض" : "الملف غير متوفر للتحميل"),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await queryClient.invalidateQueries({ queryKey: [`/api/documents?departmentId=${departmentId}`] });
@@ -261,7 +341,7 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
       return;
     }
 
-    if (!selectedFile && !newDocument.fileName.trim()) {
+    if (!editingDoc && !selectedFile && !newDocument.fileName.trim()) {
       toast({
         title: "خطأ",
         description: "يرجى رفع ملف أو إدخال اسم الملف",
@@ -274,6 +354,31 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
       .split(',')
       .map(t => t.trim())
       .filter(t => t.length > 0);
+
+    if (editingDoc) {
+      const updateData: Partial<Document> = {
+        title: newDocument.title,
+        description: newDocument.description || null,
+        category: newDocument.category,
+        dataClassification: newDocument.dataClassification,
+        version: newDocument.version,
+        isConfidential: newDocument.isConfidential,
+        tags: tagsArray.length > 0 ? tagsArray : null,
+      };
+
+      setUploadingFile(true);
+      try {
+        updateMutation.mutate({ id: editingDoc.id, data: updateData });
+
+        if (selectedFile) {
+          await uploadDocumentFile(editingDoc.id, selectedFile);
+          queryClient.invalidateQueries({ queryKey: [`/api/documents?departmentId=${departmentId}`] });
+        }
+      } finally {
+        setUploadingFile(false);
+      }
+      return;
+    }
 
     setUploadingFile(true);
     try {
@@ -299,6 +404,7 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
       queryClient.invalidateQueries({ queryKey: [`/api/documents?departmentId=${departmentId}`] });
       setShowCreateDialog(false);
       setSelectedFile(null);
+      setEditingDoc(null);
       setNewDocument({
         title: '', description: '', category: 'policy', dataClassification: 'internal',
         fileName: '', version: '1.0', isConfidential: false, tags: '',
@@ -566,29 +672,19 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
                             variant="ghost"
                             size="icon"
                             title="تحميل الملف"
-                            onClick={() => {
-                              const token = sessionStorage.getItem('_cht');
-                              fetch(`/api/documents/${doc.id}/download`, {
-                                headers: { 'Authorization': `Bearer ${token}` },
-                              }).then(async r => {
-                                if (!r.ok) throw new Error('فشل');
-                                const contentType = r.headers.get('Content-Type') || doc.fileType || 'application/octet-stream';
-                                const buffer = await r.arrayBuffer();
-                                return new Blob([buffer], { type: contentType });
-                              }).then(blob => {
-                                const url = URL.createObjectURL(blob);
-                                const link = window.document.createElement('a');
-                                link.href = url;
-                                link.setAttribute('download', doc.fileName || 'document');
-                                link.click();
-                                URL.revokeObjectURL(url);
-                              }).catch(() => {
-                                toast({ title: "خطأ", description: "الملف غير متوفر للتحميل", variant: "destructive" });
-                              });
-                            }}
+                            onClick={() => handleDownload(doc)}
                             data-testid={`button-download-document-${doc.id}`}
                           >
                             <Download className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="تعديل"
+                            onClick={() => handleEdit(doc)}
+                            data-testid={`button-edit-document-${doc.id}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -617,11 +713,21 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
           </CardContent>
         </Card>
 
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <Dialog open={showCreateDialog} onOpenChange={(open) => {
+          setShowCreateDialog(open);
+          if (!open) {
+            setEditingDoc(null);
+            setSelectedFile(null);
+            setNewDocument({
+              title: '', description: '', category: 'policy', dataClassification: 'internal',
+              fileName: '', version: '1.0', isConfidential: false, tags: '',
+            });
+          }
+        }}>
           <DialogContent className="max-w-lg" dir="rtl">
             <DialogHeader>
-              <DialogTitle className="text-foreground">إضافة مستند جديد</DialogTitle>
-              <DialogDescription>أدخل تفاصيل المستند الجديد</DialogDescription>
+              <DialogTitle className="text-foreground">{editingDoc ? 'تعديل المستند' : 'إضافة مستند جديد'}</DialogTitle>
+              <DialogDescription>{editingDoc ? 'عدّل تفاصيل المستند' : 'أدخل تفاصيل المستند الجديد'}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -761,7 +867,15 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
             <DialogFooter className="gap-2">
               <Button
                 variant="outline"
-                onClick={() => setShowCreateDialog(false)}
+                onClick={() => {
+                  setShowCreateDialog(false);
+                  setEditingDoc(null);
+                  setSelectedFile(null);
+                  setNewDocument({
+                    title: '', description: '', category: 'policy', dataClassification: 'internal',
+                    fileName: '', version: '1.0', isConfidential: false, tags: '',
+                  });
+                }}
                 className="border-foreground/20"
                 data-testid="button-cancel-document"
               >
@@ -769,11 +883,11 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
               </Button>
               <Button
                 onClick={handleCreate}
-                disabled={uploadingFile || createMutation.isPending}
+                disabled={uploadingFile || createMutation.isPending || updateMutation.isPending}
                 className="hub-btn-gold"
                 data-testid="button-submit-document"
               >
-                {uploadingFile ? 'جاري الرفع...' : createMutation.isPending ? 'جاري الحفظ...' : 'حفظ المستند'}
+                {uploadingFile ? 'جاري الرفع...' : (createMutation.isPending || updateMutation.isPending) ? 'جاري الحفظ...' : editingDoc ? 'تحديث المستند' : 'حفظ المستند'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -808,23 +922,7 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
                         size="icon"
                         variant="ghost"
                         title="عرض الملف"
-                        onClick={() => {
-                          const token = sessionStorage.getItem('_cht');
-                          fetch(`/api/documents/${selectedDocument.id}/download`, {
-                            headers: { 'Authorization': `Bearer ${token}` },
-                          }).then(async r => {
-                            if (!r.ok) throw new Error('فشل');
-                            const contentType = r.headers.get('Content-Type') || selectedDocument.fileType || 'application/octet-stream';
-                            const buffer = await r.arrayBuffer();
-                            const blob = new Blob([buffer], { type: contentType });
-                            return blob;
-                          }).then(blob => {
-                            const url = URL.createObjectURL(blob);
-                            window.open(url, '_blank');
-                          }).catch(() => {
-                            toast({ title: "خطأ", description: "الملف غير متوفر للعرض", variant: "destructive" });
-                          });
-                        }}
+                        onClick={() => handleDownload(selectedDocument, true)}
                         data-testid="button-preview-attachment"
                       >
                         <Eye className="w-4 h-4" />
@@ -834,26 +932,7 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
                       size="icon"
                       variant="ghost"
                       title="تحميل الملف"
-                      onClick={() => {
-                        const token = sessionStorage.getItem('_cht');
-                        fetch(`/api/documents/${selectedDocument.id}/download`, {
-                          headers: { 'Authorization': `Bearer ${token}` },
-                        }).then(async r => {
-                          if (!r.ok) throw new Error('فشل');
-                          const contentType = r.headers.get('Content-Type') || selectedDocument.fileType || 'application/octet-stream';
-                          const buffer = await r.arrayBuffer();
-                          return new Blob([buffer], { type: contentType });
-                        }).then(blob => {
-                          const url = URL.createObjectURL(blob);
-                          const link = window.document.createElement('a');
-                          link.href = url;
-                          link.setAttribute('download', selectedDocument.fileName || 'document');
-                          link.click();
-                          URL.revokeObjectURL(url);
-                        }).catch(() => {
-                          toast({ title: "خطأ", description: "الملف غير متوفر للتحميل", variant: "destructive" });
-                        });
-                      }}
+                      onClick={() => handleDownload(selectedDocument)}
                       data-testid="button-download-attachment"
                     >
                       <Download className="w-4 h-4" />
@@ -909,6 +988,30 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
               >
                 إغلاق
               </Button>
+              {selectedDocument && selectedDocument.status !== 'archived' && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    archiveMutation.mutate(selectedDocument.id);
+                    setShowViewDialog(false);
+                  }}
+                  className="border-foreground/20"
+                  data-testid="button-archive-document-view"
+                >
+                  <Archive className="w-4 h-4 ml-1" />
+                  أرشفة
+                </Button>
+              )}
+              {selectedDocument && (
+                <Button
+                  onClick={() => handleEdit(selectedDocument)}
+                  className="hub-btn-gold"
+                  data-testid="button-edit-document-view"
+                >
+                  <Edit2 className="w-4 h-4 ml-1" />
+                  تعديل
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
