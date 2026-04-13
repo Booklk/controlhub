@@ -311,7 +311,9 @@ export function registerDashboardRoutes(app: Express) {
 
   app.get("/api/dashboard/infrastructure", authenticateToken, async (req: any, res) => {
     try {
-      const cached = cache.get<any>('infrastructure_stats');
+      const deptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 9;
+      const cacheKey = `infrastructure_stats_${deptId}`;
+      const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);
 
       const result = await db.execute(sql`
@@ -328,26 +330,41 @@ export function registerDashboardRoutes(app: Express) {
           (SELECT count(*) FROM infrastructure_monitoring WHERE status NOT IN ('normal','resolved')) as active_alerts,
           (SELECT count(*) FROM infrastructure_monitoring WHERE status = 'critical') as critical_alerts,
           (SELECT count(*) FROM infrastructure_monitoring WHERE status = 'warning') as warning_alerts,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 9) as total_tickets,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 9 AND status IN ('open','in_progress','assigned')) as open_tickets,
-          (SELECT count(*) FROM it_projects WHERE it_department_id = 9) as total_projects,
-          (SELECT count(*) FROM it_projects WHERE it_department_id = 9 AND status IN ('planning','in_progress')) as active_projects,
-          (SELECT count(*) FROM tasks WHERE department_id = 9 AND deleted_at IS NULL) as total_tasks,
-          (SELECT count(*) FROM tasks WHERE department_id = 9 AND deleted_at IS NULL AND status IN ('pending','assigned','in_progress')) as pending_tasks
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId}) as total_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status IN ('open','in_progress','assigned')) as open_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status IN ('resolved','closed')) as resolved_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND sla_deadline IS NOT NULL AND sla_deadline < NOW() AND status NOT IN ('closed','resolved')) as sla_breaches,
+          (SELECT coalesce(avg(extract(epoch from (updated_at - created_at)) / 3600), 0) FROM it_tickets WHERE department_id = ${deptId} AND status IN ('resolved','closed')) as avg_resolution_hours,
+          (SELECT count(*) FROM it_projects WHERE it_department_id = ${deptId}) as total_projects,
+          (SELECT count(*) FROM it_projects WHERE it_department_id = ${deptId} AND status IN ('planning','in_progress')) as active_projects,
+          (SELECT count(*) FROM it_projects WHERE it_department_id = ${deptId} AND status = 'completed') as completed_projects,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL) as total_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND status IN ('pending','assigned','in_progress')) as pending_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND status = 'completed') as completed_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND due_date < NOW() AND status NOT IN ('completed','cancelled','archived')) as overdue_tasks,
+          (SELECT count(*) FROM users WHERE it_department_id = ${deptId} AND deleted_at IS NULL AND is_active = true) as staff_count,
+          (SELECT count(*) FROM it_referrals WHERE from_department_id = ${deptId} OR to_department_id = ${deptId}) as total_referrals,
+          (SELECT count(*) FROM it_referrals WHERE (from_department_id = ${deptId} OR to_department_id = ${deptId}) AND status IN ('pending','in_progress')) as active_referrals
       `);
       const r = result.rows[0] as any;
       const totalCap = Number(r?.total_capacity || 0);
       const usedCap = Number(r?.used_capacity || 0);
+      const totalTasks = Number(r?.total_tasks || 0);
+      const completedTasks = Number(r?.completed_tasks || 0);
+      const totalTickets = Number(r?.total_tickets || 0);
+      const resolvedTickets = Number(r?.resolved_tickets || 0);
       const data = {
         servers: { total: Number(r?.total_servers || 0), online: Number(r?.online_servers || 0), offline: Number(r?.offline_servers || 0), maintenance: Number(r?.maint_servers || 0) },
         networks: { total: Number(r?.total_networks || 0), active: Number(r?.active_networks || 0) },
         storage: { total: Number(r?.total_storage || 0), totalCapacityGB: totalCap, usedCapacityGB: usedCap, usagePercent: totalCap > 0 ? Math.round((usedCap / totalCap) * 100) : 0 },
         monitoring: { activeAlerts: Number(r?.active_alerts || 0), critical: Number(r?.critical_alerts || 0), warning: Number(r?.warning_alerts || 0) },
-        tickets: { total: Number(r?.total_tickets || 0), open: Number(r?.open_tickets || 0) },
-        projects: { total: Number(r?.total_projects || 0), active: Number(r?.active_projects || 0) },
-        tasks: { total: Number(r?.total_tasks || 0), pending: Number(r?.pending_tasks || 0) }
+        tickets: { total: totalTickets, open: Number(r?.open_tickets || 0), resolved: resolvedTickets, slaBreaches: Number(r?.sla_breaches || 0), avgResolutionHours: Number(Number(r?.avg_resolution_hours || 0).toFixed(1)), resolutionRate: totalTickets > 0 ? Math.round((resolvedTickets / totalTickets) * 100) : 0 },
+        projects: { total: Number(r?.total_projects || 0), active: Number(r?.active_projects || 0), completed: Number(r?.completed_projects || 0) },
+        tasks: { total: totalTasks, pending: Number(r?.pending_tasks || 0), completed: completedTasks, overdue: Number(r?.overdue_tasks || 0), completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0 },
+        staff: { total: Number(r?.staff_count || 0) },
+        referrals: { total: Number(r?.total_referrals || 0), active: Number(r?.active_referrals || 0) },
       };
-      cache.set('infrastructure_stats', data, TTL.INFRASTRUCTURE_STATS);
+      cache.set(cacheKey, data, TTL.INFRASTRUCTURE_STATS);
       res.json(data);
     } catch (error) {
       logger.error('Infrastructure dashboard error:', { error: (error as Error).message });
@@ -357,27 +374,34 @@ export function registerDashboardRoutes(app: Express) {
 
   app.get("/api/dashboard/support", authenticateToken, async (req: any, res) => {
     try {
-      const cached = cache.get<any>('support_stats');
+      const deptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 12;
+      const cacheKey = `support_stats_${deptId}`;
+      const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);
 
       const result = await db.execute(sql`
         SELECT
-          (SELECT count(*) FROM it_tickets WHERE department_id = 12) as total_tickets,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 12 AND status IN ('open','assigned')) as open_tickets,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 12 AND status = 'in_progress') as progress_tickets,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 12 AND status = 'resolved') as resolved_tickets,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 12 AND status = 'closed') as closed_tickets,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 12 AND priority IN ('high','critical')) as high_tickets,
-          (SELECT coalesce(avg(extract(epoch from (updated_at - created_at)) / 3600), 0) FROM it_tickets WHERE department_id = 12 AND status IN ('resolved','closed')) as avg_resolution,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId}) as total_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status IN ('open','assigned')) as open_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status = 'in_progress') as progress_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status = 'resolved') as resolved_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status = 'closed') as closed_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND priority IN ('high','critical')) as high_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND sla_deadline IS NOT NULL AND sla_deadline < NOW() AND status NOT IN ('closed','resolved')) as sla_breaches,
+          (SELECT coalesce(avg(extract(epoch from (updated_at - created_at)) / 3600), 0) FROM it_tickets WHERE department_id = ${deptId} AND status IN ('resolved','closed')) as avg_resolution,
           (SELECT count(*) FROM sla_agreements) as total_sla,
           (SELECT count(*) FROM sla_agreements WHERE status = 'active') as active_sla,
           (SELECT count(*) FROM customer_satisfaction) as satisfaction_count,
           (SELECT coalesce(avg(rating), 0) FROM customer_satisfaction) as avg_rating,
-          (SELECT count(*) FROM tasks WHERE department_id = 12 AND deleted_at IS NULL) as total_tasks,
-          (SELECT count(*) FROM tasks WHERE department_id = 12 AND deleted_at IS NULL AND status IN ('pending','assigned','in_progress')) as pending_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL) as total_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND status IN ('pending','assigned','in_progress')) as pending_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND status = 'completed') as completed_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND due_date < NOW() AND status NOT IN ('completed','cancelled','archived')) as overdue_tasks,
           (SELECT count(*) FROM escalations) as total_escalations,
           (SELECT count(*) FROM escalations WHERE status = 'pending') as pending_escalations,
-          (SELECT count(*) FROM users WHERE it_department_id = 12 AND deleted_at IS NULL) as total_agents
+          (SELECT count(*) FROM users WHERE it_department_id = ${deptId} AND deleted_at IS NULL AND is_active = true) as total_agents,
+          (SELECT count(*) FROM it_referrals WHERE from_department_id = ${deptId} OR to_department_id = ${deptId}) as total_referrals,
+          (SELECT count(*) FROM it_referrals WHERE (from_department_id = ${deptId} OR to_department_id = ${deptId}) AND status IN ('pending','in_progress')) as active_referrals
       `);
       const r = result.rows[0] as any;
       const resolvedCount = Number(r?.resolved_tickets || 0);
@@ -385,15 +409,18 @@ export function registerDashboardRoutes(app: Express) {
       const totalCount = Number(r?.total_tickets || 0);
       const resolutionRate = totalCount > 0 ? Math.round(((resolvedCount + closedCount) / totalCount) * 100) : 0;
       const avgResHours = Number(r?.avg_resolution || 0);
+      const totalTasks = Number(r?.total_tasks || 0);
+      const completedTasks = Number(r?.completed_tasks || 0);
       const data = {
-        tickets: { total: totalCount, open: Number(r?.open_tickets || 0), inProgress: Number(r?.progress_tickets || 0), resolved: resolvedCount, closed: closedCount, highPriority: Number(r?.high_tickets || 0), avgResolutionHours: Number(avgResHours.toFixed(1)), resolutionRate },
+        tickets: { total: totalCount, open: Number(r?.open_tickets || 0), inProgress: Number(r?.progress_tickets || 0), resolved: resolvedCount, closed: closedCount, highPriority: Number(r?.high_tickets || 0), slaBreaches: Number(r?.sla_breaches || 0), avgResolutionHours: Number(avgResHours.toFixed(1)), resolutionRate },
         sla: { total: Number(r?.total_sla || 0), active: Number(r?.active_sla || 0) },
         satisfaction: { totalResponses: Number(r?.satisfaction_count || 0), avgRating: Number(Number(r?.avg_rating || 0).toFixed(1)) },
-        tasks: { total: Number(r?.total_tasks || 0), pending: Number(r?.pending_tasks || 0) },
+        tasks: { total: totalTasks, pending: Number(r?.pending_tasks || 0), completed: completedTasks, overdue: Number(r?.overdue_tasks || 0), completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0 },
         escalations: { total: Number(r?.total_escalations || 0), pending: Number(r?.pending_escalations || 0) },
-        agents: { total: Number(r?.total_agents || 0) }
+        agents: { total: Number(r?.total_agents || 0) },
+        referrals: { total: Number(r?.total_referrals || 0), active: Number(r?.active_referrals || 0) },
       };
-      cache.set('support_stats', data, TTL.SUPPORT_STATS);
+      cache.set(cacheKey, data, TTL.SUPPORT_STATS);
       res.json(data);
     } catch (error) {
       logger.error('Support dashboard error:', { error: (error as Error).message });
@@ -403,7 +430,9 @@ export function registerDashboardRoutes(app: Express) {
 
   app.get("/api/dashboard/digital-transformation", authenticateToken, async (req: any, res) => {
     try {
-      const cached = cache.get<any>('digital_stats');
+      const deptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 11;
+      const cacheKey = `digital_stats_${deptId}`;
+      const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);
 
       const result = await db.execute(sql`
@@ -415,25 +444,134 @@ export function registerDashboardRoutes(app: Express) {
           (SELECT coalesce(avg(progress), 0) FROM digital_initiatives) as avg_progress,
           (SELECT count(*) FROM digital_applications) as total_apps,
           (SELECT count(*) FROM digital_applications WHERE status = 'active') as active_apps,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 11) as total_tickets,
-          (SELECT count(*) FROM it_tickets WHERE department_id = 11 AND status IN ('open','in_progress','assigned')) as open_tickets,
-          (SELECT count(*) FROM it_projects WHERE it_department_id = 11) as total_projects,
-          (SELECT count(*) FROM it_projects WHERE it_department_id = 11 AND status IN ('planning','in_progress')) as active_projects,
-          (SELECT count(*) FROM tasks WHERE department_id = 11 AND deleted_at IS NULL) as total_tasks,
-          (SELECT count(*) FROM tasks WHERE department_id = 11 AND deleted_at IS NULL AND status IN ('pending','assigned','in_progress')) as pending_tasks
+          (SELECT count(*) FROM cloud_services) as total_cloud,
+          (SELECT count(*) FROM cloud_services WHERE status = 'active') as active_cloud,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId}) as total_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status IN ('open','in_progress','assigned')) as open_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status IN ('resolved','closed')) as resolved_tickets,
+          (SELECT count(*) FROM it_projects WHERE it_department_id = ${deptId}) as total_projects,
+          (SELECT count(*) FROM it_projects WHERE it_department_id = ${deptId} AND status IN ('planning','in_progress')) as active_projects,
+          (SELECT count(*) FROM it_projects WHERE it_department_id = ${deptId} AND status = 'completed') as completed_projects,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL) as total_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND status IN ('pending','assigned','in_progress')) as pending_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND status = 'completed') as completed_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND due_date < NOW() AND status NOT IN ('completed','cancelled','archived')) as overdue_tasks,
+          (SELECT count(*) FROM users WHERE it_department_id = ${deptId} AND deleted_at IS NULL AND is_active = true) as staff_count,
+          (SELECT count(*) FROM it_referrals WHERE from_department_id = ${deptId} OR to_department_id = ${deptId}) as total_referrals,
+          (SELECT count(*) FROM it_referrals WHERE (from_department_id = ${deptId} OR to_department_id = ${deptId}) AND status IN ('pending','in_progress')) as active_referrals
       `);
       const r = result.rows[0] as any;
+      const totalTasks = Number(r?.total_tasks || 0);
+      const completedTasks = Number(r?.completed_tasks || 0);
       const data = {
         initiatives: { total: Number(r?.total_initiatives || 0), active: Number(r?.active_initiatives || 0), completed: Number(r?.completed_initiatives || 0), planning: Number(r?.planning_initiatives || 0), avgProgress: Math.round(Number(r?.avg_progress || 0)) },
         applications: { total: Number(r?.total_apps || 0), active: Number(r?.active_apps || 0) },
-        tickets: { total: Number(r?.total_tickets || 0), open: Number(r?.open_tickets || 0) },
-        projects: { total: Number(r?.total_projects || 0), active: Number(r?.active_projects || 0) },
-        tasks: { total: Number(r?.total_tasks || 0), pending: Number(r?.pending_tasks || 0) }
+        cloud: { total: Number(r?.total_cloud || 0), active: Number(r?.active_cloud || 0) },
+        tickets: { total: Number(r?.total_tickets || 0), open: Number(r?.open_tickets || 0), resolved: Number(r?.resolved_tickets || 0) },
+        projects: { total: Number(r?.total_projects || 0), active: Number(r?.active_projects || 0), completed: Number(r?.completed_projects || 0) },
+        tasks: { total: totalTasks, pending: Number(r?.pending_tasks || 0), completed: completedTasks, overdue: Number(r?.overdue_tasks || 0), completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0 },
+        staff: { total: Number(r?.staff_count || 0) },
+        referrals: { total: Number(r?.total_referrals || 0), active: Number(r?.active_referrals || 0) },
       };
-      cache.set('digital_stats', data, TTL.DIGITAL_STATS);
+      cache.set(cacheKey, data, TTL.DIGITAL_STATS);
       res.json(data);
     } catch (error) {
       logger.error('Digital transformation dashboard error:', { error: (error as Error).message });
+      res.status(500).json({ error: 'حدث خطأ في الخادم' });
+    }
+  });
+
+  // ==================== DMO Dashboard ====================
+  app.get("/api/dashboard/dmo", authenticateToken, async (req: any, res) => {
+    try {
+      const deptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 5;
+      const cacheKey = `dmo_stats_${deptId}`;
+      const cached = cache.get<any>(cacheKey);
+      if (cached) return res.json(cached);
+
+      const result = await db.execute(sql`
+        SELECT
+          (SELECT count(*) FROM requirements) as total_requirements,
+          (SELECT count(*) FROM requirements WHERE status = 'approved') as approved_requirements,
+          (SELECT count(*) FROM requirements WHERE status = 'pending') as pending_requirements,
+          (SELECT count(*) FROM evidences WHERE deleted_at IS NULL) as total_evidences,
+          (SELECT count(*) FROM evidences WHERE deleted_at IS NULL AND status = 'pending') as pending_evidences,
+          (SELECT count(*) FROM evidences WHERE deleted_at IS NULL AND status = 'approved') as approved_evidences,
+          (SELECT count(*) FROM evidences WHERE deleted_at IS NULL AND status = 'rejected') as rejected_evidences,
+          (SELECT count(*) FROM compliance_reports) as total_reports,
+          (SELECT count(*) FROM compliance_reports WHERE status = 'completed') as completed_reports,
+          (SELECT count(*) FROM data_assets) as total_assets,
+          (SELECT count(*) FROM data_assets WHERE classification = 'top_secret') as secret_assets,
+          (SELECT count(*) FROM data_assets WHERE classification = 'confidential') as confidential_assets,
+          (SELECT count(*) FROM data_assets WHERE classification = 'restricted') as restricted_assets,
+          (SELECT count(*) FROM data_assets WHERE classification = 'public') as public_assets,
+          (SELECT count(*) FROM consent_records WHERE is_active = true) as active_consents,
+          (SELECT count(*) FROM consent_records) as total_consents,
+          (SELECT count(*) FROM data_breaches) as total_breaches,
+          (SELECT count(*) FROM data_breaches WHERE status IN ('open','investigating')) as active_breaches,
+          (SELECT count(*) FROM processing_records) as total_processing,
+          (SELECT count(*) FROM privacy_notices WHERE is_active = true) as active_notices,
+          (SELECT count(*) FROM data_subject_requests) as total_dsr,
+          (SELECT count(*) FROM data_subject_requests WHERE status = 'pending') as pending_dsr,
+          (SELECT count(*) FROM data_subject_requests WHERE status = 'completed') as completed_dsr,
+          (SELECT count(*) FROM ndmo_assessments) as total_ndmo,
+          (SELECT coalesce(avg(overall_score), 0) FROM ndmo_assessments) as avg_ndmo_score,
+          (SELECT count(*) FROM data_risks) as total_risks,
+          (SELECT count(*) FROM data_risks WHERE risk_level IN ('high','critical')) as high_risks,
+          (SELECT count(*) FROM data_agreements) as total_agreements,
+          (SELECT count(*) FROM data_agreements WHERE status = 'active') as active_agreements,
+          (SELECT count(*) FROM training_courses) as total_courses,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId}) as total_tickets,
+          (SELECT count(*) FROM it_tickets WHERE department_id = ${deptId} AND status IN ('open','in_progress','assigned')) as open_tickets,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL) as total_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND status IN ('pending','assigned','in_progress')) as pending_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND status = 'completed') as completed_tasks,
+          (SELECT count(*) FROM tasks WHERE department_id = ${deptId} AND deleted_at IS NULL AND due_date < NOW() AND status NOT IN ('completed','cancelled','archived')) as overdue_tasks,
+          (SELECT count(*) FROM it_projects WHERE it_department_id = ${deptId}) as total_projects,
+          (SELECT count(*) FROM it_projects WHERE it_department_id = ${deptId} AND status IN ('planning','in_progress')) as active_projects,
+          (SELECT count(*) FROM users WHERE it_department_id = ${deptId} AND deleted_at IS NULL AND is_active = true) as staff_count,
+          (SELECT count(*) FROM it_referrals WHERE from_department_id = ${deptId} OR to_department_id = ${deptId}) as total_referrals
+      `);
+      const r = result.rows[0] as any;
+      const totalTasks = Number(r?.total_tasks || 0);
+      const completedTasks = Number(r?.completed_tasks || 0);
+      const totalReqs = Number(r?.total_requirements || 0);
+      const approvedReqs = Number(r?.approved_requirements || 0);
+      const totalEvidences = Number(r?.total_evidences || 0);
+      const approvedEvs = Number(r?.approved_evidences || 0);
+
+      const data = {
+        compliance: {
+          requirements: { total: totalReqs, approved: approvedReqs, pending: Number(r?.pending_requirements || 0), coverageRate: totalReqs > 0 ? Math.round((approvedReqs / totalReqs) * 100) : 0 },
+          evidences: { total: totalEvidences, pending: Number(r?.pending_evidences || 0), approved: approvedEvs, rejected: Number(r?.rejected_evidences || 0), completionRate: totalEvidences > 0 ? Math.round((approvedEvs / totalEvidences) * 100) : 0 },
+          reports: { total: Number(r?.total_reports || 0), completed: Number(r?.completed_reports || 0) },
+          ndmo: { total: Number(r?.total_ndmo || 0), avgScore: Math.round(Number(r?.avg_ndmo_score || 0)) },
+        },
+        dataGovernance: {
+          assets: { total: Number(r?.total_assets || 0), topSecret: Number(r?.secret_assets || 0), confidential: Number(r?.confidential_assets || 0), restricted: Number(r?.restricted_assets || 0), public: Number(r?.public_assets || 0) },
+          risks: { total: Number(r?.total_risks || 0), highCritical: Number(r?.high_risks || 0) },
+          agreements: { total: Number(r?.total_agreements || 0), active: Number(r?.active_agreements || 0) },
+          courses: { total: Number(r?.total_courses || 0) },
+        },
+        privacy: {
+          consents: { total: Number(r?.total_consents || 0), active: Number(r?.active_consents || 0) },
+          breaches: { total: Number(r?.total_breaches || 0), active: Number(r?.active_breaches || 0) },
+          processing: { total: Number(r?.total_processing || 0) },
+          notices: { active: Number(r?.active_notices || 0) },
+          dsr: { total: Number(r?.total_dsr || 0), pending: Number(r?.pending_dsr || 0), completed: Number(r?.completed_dsr || 0) },
+        },
+        operations: {
+          tickets: { total: Number(r?.total_tickets || 0), open: Number(r?.open_tickets || 0) },
+          tasks: { total: totalTasks, pending: Number(r?.pending_tasks || 0), completed: completedTasks, overdue: Number(r?.overdue_tasks || 0), completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0 },
+          projects: { total: Number(r?.total_projects || 0), active: Number(r?.active_projects || 0) },
+          staff: { total: Number(r?.staff_count || 0) },
+          referrals: { total: Number(r?.total_referrals || 0) },
+        },
+      };
+      cache.set(cacheKey, data, TTL.DASHBOARD_STATS);
+      res.json(data);
+    } catch (error) {
+      logger.error('DMO dashboard error:', { error: (error as Error).message });
       res.status(500).json({ error: 'حدث خطأ في الخادم' });
     }
   });
