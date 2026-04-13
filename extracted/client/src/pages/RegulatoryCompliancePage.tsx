@@ -165,18 +165,19 @@ export default function RegulatoryCompliancePage({ navGroups, portalName, portal
   });
 
   const bulkImportMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/regulatory-controls/bulk-import', data),
-    onSuccess: (response) => {
-      response.json().then((data: any) => {
-        queryClient.invalidateQueries({ queryKey: ['/api/regulatory-controls'] });
-        invalidateRelatedQueries('/api/regulatory-controls');
-        toast({ title: `تم استيراد ${data.count} ضابط بنجاح` });
-        setShowBulkImport(false);
-        setBulkText('');
-        setActiveTab('controls');
-      });
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('POST', '/api/regulatory-controls/bulk-import', data);
+      return res.json();
     },
-    onError: () => toast({ title: 'خطأ في الاستيراد الجماعي', variant: 'destructive' }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/regulatory-controls'] });
+      invalidateRelatedQueries('/api/regulatory-controls');
+      toast({ title: `تم استيراد ${data.count} ضابط بنجاح` });
+      setShowBulkImport(false);
+      setBulkText('');
+      setActiveTab('controls');
+    },
+    onError: (error: Error) => toast({ title: 'خطأ في الاستيراد الجماعي', description: error.message, variant: 'destructive' }),
   });
 
   const resetForm = () => {

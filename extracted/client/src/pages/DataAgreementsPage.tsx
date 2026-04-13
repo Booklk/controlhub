@@ -73,35 +73,41 @@ export default function DataAgreementsPage({ navGroups, portalName }: DataAgreem
       setSuccessAgreement({ id: data.id, title: data.title });
       resetForm();
     },
-    onError: () => {
-      toast({ title: "خطأ في إنشاء العقد", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في إنشاء العقد", description: error.message, variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      apiRequest("PUT", `/api/data-agreements/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const r = await apiRequest("PUT", `/api/data-agreements/${id}`, data);
+      return r.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-agreements"] });
       invalidateRelatedQueries('/api/data-agreements');
       setIsDialogOpen(false);
       setEditing(null);
+      resetForm();
       toast({ title: "تم تحديث العقد" });
     },
-    onError: () => {
-      toast({ title: "خطأ في تحديث العقد", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في تحديث العقد", description: error.message, variant: "destructive" });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/data-agreements/${id}`),
+    mutationFn: async (id: number) => {
+      const r = await apiRequest("DELETE", `/api/data-agreements/${id}`);
+      return r.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-agreements"] });
       invalidateRelatedQueries('/api/data-agreements');
       toast({ title: "تم حذف العقد" });
     },
-    onError: () => {
-      toast({ title: "خطأ في حذف العقد", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ في حذف العقد", description: error.message, variant: "destructive" });
     },
   });
 

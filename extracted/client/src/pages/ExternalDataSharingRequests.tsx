@@ -396,32 +396,41 @@ export default function ExternalDataSharingRequests() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/external-sharing-requests", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/external-sharing-requests", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-sharing-requests"] });
       toast({ title: "تم التسجيل", description: "تم تسجيل طلب مشاركة البيانات بنجاح" });
       setShowForm(false);
     },
-    onError: (e: any) => toast({ title: "خطأ", description: e?.message || "حدث خطأ", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PUT", `/api/external-sharing-requests/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/external-sharing-requests/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-sharing-requests"] });
       toast({ title: "تم التحديث", description: "تم تحديث السجل بنجاح" });
       setEditing(null);
     },
-    onError: (e: any) => toast({ title: "خطأ", description: e?.message || "حدث خطأ", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/external-sharing-requests/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/external-sharing-requests/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-sharing-requests"] });
       toast({ title: "تم الحذف", description: "تم حذف السجل" });
     },
-    onError: (e: any) => toast({ title: "خطأ", description: e?.message || "حدث خطأ", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
 
   const handleSave = (data: any) => {
