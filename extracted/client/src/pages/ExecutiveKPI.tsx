@@ -51,7 +51,7 @@ export default function ExecutiveKPI() {
   const { user } = useAuth();
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  const { data, isLoading, refetch, isFetching } = useQuery<KPIData[]>({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery<KPIData[]>({
     queryKey: ["/api/kpi/summary"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/kpi/summary");
@@ -59,6 +59,7 @@ export default function ExecutiveKPI() {
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
   const getNavGroups = () => {
@@ -161,10 +162,44 @@ export default function ExecutiveKPI() {
           </div>
         </div>
 
+        {/* Summary Cards */}
+        {!isLoading && !isError && data && data.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="card-premium border-white/5 bg-[#0f1f3d]/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs text-white/40 mb-1">إجمالي الأقسام</p>
+                <p className="text-3xl font-bold text-[hsl(var(--gold))]" data-testid="stat-total-departments">{data.length}</p>
+              </CardContent>
+            </Card>
+            <Card className="card-premium border-white/5 bg-[#0f1f3d]/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs text-white/40 mb-1">التذاكر المفتوحة</p>
+                <p className="text-3xl font-bold text-yellow-400" data-testid="stat-total-open-tickets">{data.reduce((acc, d) => acc + d.openTickets, 0)}</p>
+              </CardContent>
+            </Card>
+            <Card className="card-premium border-white/5 bg-[#0f1f3d]/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs text-white/40 mb-1">متوسط SLA</p>
+                <p className={`text-3xl font-bold ${Math.round(data.reduce((acc, d) => acc + d.slaComplianceRate, 0) / data.length) >= 90 ? 'text-emerald-400' : Math.round(data.reduce((acc, d) => acc + d.slaComplianceRate, 0) / data.length) >= 70 ? 'text-amber-400' : 'text-rose-400'}`} data-testid="stat-avg-sla">
+                  {Math.round(data.reduce((acc, d) => acc + d.slaComplianceRate, 0) / data.length)}%
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="card-premium border-white/5 bg-[#0f1f3d]/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs text-white/40 mb-1">مهام متأخرة</p>
+                <p className={`text-3xl font-bold ${data.reduce((acc, d) => acc + d.overdueTasks, 0) > 0 ? 'text-rose-400' : 'text-emerald-400'}`} data-testid="stat-total-overdue">
+                  {data.reduce((acc, d) => acc + d.overdueTasks, 0)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {[1, 2].map((i) => (
-              <Card key={i} className="card-premium border-white/5 bg-[#0f1f3d]/50">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="card-premium border-white/5 bg-[#0f1f3d]/50 animate-pulse">
                 <CardHeader className="border-b border-white/5">
                   <Skeleton className="h-7 w-48" />
                 </CardHeader>
@@ -181,6 +216,28 @@ export default function ExecutiveKPI() {
               </Card>
             ))}
           </div>
+        ) : isError ? (
+          <Card className="card-premium border-rose-500/20 bg-rose-500/5">
+            <CardContent className="p-8 text-center">
+              <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto mb-3" />
+              <h3 className="text-lg font-bold text-white mb-2">تعذر تحميل البيانات</h3>
+              <p className="text-sm text-white/50 mb-4">
+                {error instanceof Error ? error.message : 'حدث خطأ أثناء جلب مؤشرات الأداء. تأكد من اتصالك بالخادم.'}
+              </p>
+              <Button onClick={() => refetch()} variant="gold" className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                إعادة المحاولة
+              </Button>
+            </CardContent>
+          </Card>
+        ) : data && data.length === 0 ? (
+          <Card className="card-premium border-white/5 bg-[#0f1f3d]/50">
+            <CardContent className="p-8 text-center">
+              <BarChart3 className="w-12 h-12 text-white/20 mx-auto mb-3" />
+              <h3 className="text-lg font-bold text-white mb-2">لا توجد بيانات</h3>
+              <p className="text-sm text-white/50">لم يتم العثور على بيانات مؤشرات أداء لأي قسم حالياً.</p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {data?.map((dept) => (

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { Link } from "wouter";
 import {
@@ -330,30 +330,31 @@ function ComplianceBar({ label, value, color }: { label: string; value: number; 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function CommandCenter() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // ── Data Queries ─────────────────────────────────────────────────────────
-  const { data: govScore } = useQuery<any>({
+  const { data: govScore, status: govStatus } = useQuery<any>({
     queryKey: ["/api/governance/score"],
     refetchInterval: 10 * 60 * 1000,
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: adminStats } = useQuery<any>({
+  const { data: adminStats, status: statsStatus } = useQuery<any>({
     queryKey: ["/api/dashboard/stats"],
     refetchInterval: 5 * 60 * 1000,
     staleTime: 2 * 60 * 1000,
   });
 
-  const { data: auditLogs } = useQuery<any[]>({
+  const { data: auditLogs, status: logsStatus } = useQuery<any[]>({
     queryKey: ["/api/audit-logs"],
     select: (d: any) => (Array.isArray(d) ? d : d?.logs || []).slice(0, 25),
     refetchInterval: 3 * 60 * 1000,
     staleTime: 60 * 1000,
   });
 
-  const { data: servers = [] } = useQuery<any[]>({
+  const { data: servers = [], status: serversStatus } = useQuery<any[]>({
     queryKey: ["/api/infrastructure/servers"],
     refetchInterval: 5 * 60 * 1000,
     staleTime: 2 * 60 * 1000,
@@ -451,9 +452,21 @@ export default function CommandCenter() {
   const criticalAlerts = monitoring?.critical || 0;
   const warningAlerts = monitoring?.warning || 0;
 
+  // Connection status: all key data sources
+  const connectionStatuses = [
+    { label: "الحوكمة", status: govStatus },
+    { label: "الإحصائيات", status: statsStatus },
+    { label: "السجلات", status: logsStatus },
+    { label: "الخوادم", status: serversStatus },
+  ];
+  const allConnected = connectionStatuses.every(c => c.status === "success");
+  const anyError = connectionStatuses.some(c => c.status === "error");
+  const anyLoading = connectionStatuses.some(c => c.status === "pending");
+
   const handleRefresh = useCallback(() => {
+    queryClient.invalidateQueries();
     setLastRefresh(new Date());
-  }, []);
+  }, [queryClient]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -502,7 +515,13 @@ export default function CommandCenter() {
                 <Radio className="w-4 h-4 text-yellow-400" />
               </motion.div>
               <div>
-                <h1 className="text-base font-bold text-white leading-tight">مركز القيادة الحي</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base font-bold text-white leading-tight">مركز القيادة الحي</h1>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 border border-red-500/40 text-red-400 live-badge-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                    مباشر
+                  </span>
+                </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <PulseDot color="emerald" size={1.5} />
                   <span className="text-[10px] text-emerald-400 font-medium">بث مباشر</span>
@@ -513,6 +532,18 @@ export default function CommandCenter() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Connection Status */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/8 bg-white/4">
+              <span className={`w-2 h-2 rounded-full ${anyError ? 'bg-red-400' : anyLoading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              <span className="text-[10px] text-white/50">
+                {anyError ? 'خطأ في الاتصال' : anyLoading ? 'جاري التحميل...' : 'جميع الأنظمة متصلة'}
+              </span>
+              {anyError && (
+                <span className="text-[10px] text-red-400 font-medium mr-1">
+                  ({connectionStatuses.filter(c => c.status === "error").length})
+                </span>
+              )}
+            </div>
             {/* Alert banners */}
             <div className="flex items-center gap-2">
               <AlertBanner count={criticalAlerts} label="تنبيهات حرجة" color="red" />
@@ -753,6 +784,13 @@ export default function CommandCenter() {
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 2px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+        @keyframes liveBadgePulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .live-badge-pulse {
+          animation: liveBadgePulse 1.5s ease-in-out infinite;
+        }
       `}</style>
     </div>
   );

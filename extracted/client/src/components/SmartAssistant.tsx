@@ -1283,7 +1283,7 @@ export function SmartAssistant() {
       const welcome: Message = {
         id: 'welcome',
         role: 'assistant',
-        content: `${timeGreet} يا ${userName || 'مستخدم'}! 👋\n\nأنا **مجيب** — مساعدك الذكي في مركز التحكم JCSA.\n\n${portalCtx[portal] || 'أقدم لك معلومات دقيقة من البيانات الحية.'}\n\n**ما أقدر أساعدك فيه:**\n• 📊 بيانات حية: تذاكر، مهام، مشاريع، خوادم\n• ⚠️ تنبيهات وأولويات عاجلة\n• 📋 ضوابط الامتثال: NCA، NDMO، DGA\n• ⏱️ حالة SLA والإحالات بين الأقسام\n• 📅 ملخص يومي وأسبوعي مقارن\n\n💡 اسألني بالعربية أو اختر من الاقتراحات أدناه:`,
+        content: `${timeGreet} يا ${userName || 'مستخدم'}! 👋\n\nأنا **مجيب** — مساعدك الذكي في مركز التحكم JCSA.\n\n${portalCtx[portal] || 'أقدم لك معلومات دقيقة من البيانات الحية.'}\n\n**خدماتي لك:**\n• 📊 **بيانات حية** — تذاكر، مهام، مشاريع، خوادم، إحالات\n• ⚠️ **تنبيهات ذكية** — أولويات عاجلة وإجراءات فورية\n• 📋 **ضوابط الامتثال** — NCA، NDMO، DGA مع تفاصيل كل مجال\n• ⏱️ **متابعة SLA** — حالة الإحالات بين الأقسام\n• 📅 **تقارير مقارنة** — ملخص يومي وأسبوعي مع الاتجاهات\n• 🎯 **نصائح وتوصيات** — مبنية على بيانات قسمك الفعلية\n\n💡 اسألني بالعربية أو اختر من الاقتراحات أدناه للبدء فوراً:`,
         timestamp: new Date(),
         intent: 'welcome',
         suggestions: chips.filter(c => c.category === 'action' || c.category === 'alerts').slice(0, 4).map(c => c.label),
@@ -1371,13 +1371,21 @@ export function SmartAssistant() {
         actions: response.actions,
       }]);
       if (!open) setHasNewMsg(true);
-    } catch {
+    } catch (error) {
+      const errDetail = error instanceof Error ? error.message : '';
+      const isAuthError = errDetail.includes('401') || errDetail.includes('403');
+      const isNetworkError = errDetail.includes('Failed to fetch') || errDetail.includes('NetworkError');
+      const errorContent = isAuthError
+        ? 'عذراً، انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى للمتابعة.'
+        : isNetworkError
+        ? 'عذراً، لا يمكن الاتصال بالخادم حالياً. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.'
+        : `عذراً، حدث خطأ في الاتصال${errDetail ? ` (${errDetail})` : ''}. حاول مرة أخرى.`;
       setMessages(prev => [...prev, {
         id: `e-${Date.now()}`,
         role: 'assistant',
-        content: 'عذراً، حدث خطأ في الاتصال. تأكد من تسجيل الدخول وحاول مرة أخرى.',
+        content: errorContent,
         timestamp: new Date(),
-        suggestions: ['ملخص يومي', 'التذاكر المفتوحة'],
+        suggestions: ['ملخص يومي', 'التذاكر المفتوحة', 'ماذا أفعل الآن؟'],
       }]);
     } finally {
       setLoading(false);
@@ -1420,10 +1428,10 @@ export function SmartAssistant() {
       setMessages([{
         id: 'welcome-reset',
         role: 'assistant',
-        content: `تم مسح المحادثة. كيف يمكنني مساعدتك يا ${userName || 'مستخدم'}؟`,
+        content: `تم مسح المحادثة بنجاح. 🔄\n\nأنا جاهز لمساعدتك يا ${userName || 'مستخدم'}. اسألني عن أي شيء أو اختر من الاقتراحات أدناه:`,
         timestamp: new Date(),
         intent: 'welcome',
-        suggestions: chips.filter(c => c.category === 'action' || c.category === 'alerts').slice(0, 3).map(c => c.label),
+        suggestions: chips.filter(c => c.category === 'action' || c.category === 'alerts').slice(0, 4).map(c => c.label),
       }]);
     }, 100);
   }, [userName, portal]);

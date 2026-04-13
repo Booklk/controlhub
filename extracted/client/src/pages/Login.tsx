@@ -121,15 +121,15 @@ export default function Login() {
       const msg = error.message || '';
       let description = msg;
       if (msg.includes('مقفل') || msg.includes('محاولات') || msg.includes('locked')) {
-        description = t('تم قفل الحساب مؤقتاً بسبب محاولات خاطئة متكررة. حاول بعد 15 دقيقة.');
+        description = t('تم قفل الحساب مؤقتاً بسبب محاولات دخول خاطئة متكررة. يرجى المحاولة بعد 15 دقيقة أو التواصل مع مدير النظام.');
       } else if (msg.includes('غير مفعل') || msg.includes('not activated')) {
-        description = t('الحساب غير مفعل — تحقق من بريدك الإلكتروني أو تواصل مع المسؤول.');
+        description = t('الحساب غير مفعّل بعد — يرجى التحقق من بريدك الإلكتروني أو التواصل مع مدير النظام لتفعيل حسابك.');
       } else if (msg.includes('معطل') || msg.includes('disabled')) {
-        description = t('الحساب معطل — تواصل مع مدير النظام.');
+        description = t('تم تعطيل هذا الحساب. يرجى التواصل مع مدير النظام لإعادة التفعيل.');
       } else if (msg.includes('بيانات الدخول غير صحيحة') || msg.includes('غير صحيحة') || msg.includes('invalid')) {
-        description = t('البريد الإلكتروني أو كلمة المرور غير صحيحة');
-      } else if (!msg) {
-        description = t('حدث خطأ في الاتصال بالسيرفر. حاول مرة أخرى.');
+        description = t('البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى التحقق من البيانات والمحاولة مرة أخرى.');
+      } else if (msg.includes('timeout') || msg.includes('network') || !msg) {
+        description = t('تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.');
       }
       toast({ title: t('خطأ في تسجيل الدخول'), description, variant: 'destructive' });
     }
@@ -278,12 +278,13 @@ export default function Login() {
             <div className={`w-full max-w-[370px] flex-shrink-0 transition-all duration-1000 delay-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
               <div
                 ref={cardRef}
-                className={`relative bg-navy/70 backdrop-blur-2xl border border-white/[0.06] rounded-2xl p-7 ${loginSuccess ? 'login-success-exit' : ''}`}
+                className={`relative bg-navy/70 backdrop-blur-2xl rounded-2xl p-7 login-card-border ${loginSuccess ? 'login-success-exit' : ''}`}
                 style={{ boxShadow: '0 25px 60px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset' }}
                 data-testid="card-login"
               >
                 <div className="text-center mb-7">
-                  <h2 className="text-lg font-bold text-white/85 mb-1">{t('تسجيل الدخول')}</h2>
+                  <h3 className="text-[13px] font-bold text-gold/70 mb-0.5 tracking-wide">نادي سباقات الخيل</h3>
+                  <h2 className="text-lg font-bold text-white/85 mb-1">{t('مركز التحكم - Control Hub')}</h2>
                   <p className="text-[12px] text-white/45">{t('أدخل بيانات الاعتماد للوصول إلى النظام')}</p>
                 </div>
 
@@ -416,8 +417,11 @@ export default function Login() {
         </div>
 
         <footer className={`px-6 pb-4 text-center transition-all duration-1000 delay-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
-          <p className="text-[9px] text-white/6 tracking-wide">
-            © {new Date().getFullYear()} نادي سباقات الخيل - جميع الحقوق محفوظة
+          <p className="text-[9px] text-white/20 tracking-wide">
+            © {new Date().getFullYear()} نادي سباقات الخيل — جميع الحقوق محفوظة
+          </p>
+          <p className="text-[8px] text-white/10 mt-0.5 tracking-wider">
+            Control Hub v2.0
           </p>
         </footer>
       </div>
@@ -509,6 +513,38 @@ export default function Login() {
         }
         @keyframes exitUp {
           to { opacity: 0; transform: translateY(-15px) scale(0.99); }
+        }
+        @keyframes borderShimmer {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .login-card-border {
+          border: 1px solid transparent;
+          background-clip: padding-box;
+          position: relative;
+        }
+        .login-card-border::before {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          border-radius: inherit;
+          padding: 1px;
+          background: linear-gradient(
+            135deg,
+            rgba(255,255,255,0.04) 0%,
+            rgba(201,162,39,0.25) 25%,
+            rgba(255,255,255,0.06) 50%,
+            rgba(201,162,39,0.20) 75%,
+            rgba(255,255,255,0.04) 100%
+          );
+          background-size: 300% 300%;
+          animation: borderShimmer 6s ease-in-out infinite;
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          z-index: 0;
         }
       `}</style>
     </div>

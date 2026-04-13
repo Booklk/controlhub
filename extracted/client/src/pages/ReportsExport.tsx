@@ -15,8 +15,11 @@ import {
   HardDrive, Network, Archive, Monitor,
   Lightbulb, AppWindow, Cloud,
   ArrowUpFromLine, Truck, FileBarChart,
-  Gavel, Users2, BookOpen, BarChart3, Handshake, LayoutGrid
+  Gavel, Users2, BookOpen, BarChart3, Handshake, LayoutGrid,
+  FileText, Filter
 } from 'lucide-react';
+
+type ExportFormat = 'xlsx' | 'pdf';
 
 interface ReportType {
   id: string;
@@ -28,8 +31,47 @@ interface ReportType {
   category: string;
 }
 
+interface ReportTemplate {
+  id: string;
+  label: string;
+  description: string;
+  icon: JSX.Element;
+  reportIds: string[];
+}
+
 const GOLD = 'hub-badge-gold';
 const NAVY = 'hub-badge-navy';
+
+const reportTemplates: ReportTemplate[] = [
+  {
+    id: 'weekly-ops',
+    label: 'التقرير التشغيلي الأسبوعي',
+    description: 'تذاكر + مهام + تصعيدات + SLA',
+    icon: <Calendar className="w-5 h-5" />,
+    reportIds: ['tickets', 'tasks', 'escalations', 'sla', 'weekly-report'],
+  },
+  {
+    id: 'security-posture',
+    label: 'الوضع الأمني الشامل',
+    description: 'بلاغات + ثغرات + تهديدات + امتثال',
+    icon: <Shield className="w-5 h-5" />,
+    reportIds: ['security-incidents', 'vulnerabilities', 'threats', 'compliance'],
+  },
+  {
+    id: 'infra-health',
+    label: 'صحة البنية التحتية',
+    description: 'خوادم + شبكات + تخزين + أصول',
+    icon: <Server className="w-5 h-5" />,
+    reportIds: ['servers', 'networks', 'storage', 'it-assets'],
+  },
+  {
+    id: 'data-governance',
+    label: 'حوكمة البيانات',
+    description: 'أصول + قاموس + مخاطر + اتفاقيات',
+    icon: <Database className="w-5 h-5" />,
+    reportIds: ['data-assets', 'data-dictionary', 'data-risks', 'data-agreements', 'data-stewards'],
+  },
+];
 
 interface CategoryInfo {
   id: string;
@@ -317,11 +359,34 @@ export default function ReportsExport() {
   const { toast } = useToast();
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('xlsx');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
 
-  const handleExport = async (report: ReportType) => {
+  const departmentOptions = [
+    { value: 'all', label: 'جميع الإدارات' },
+    { value: 'it', label: 'تقنية المعلومات' },
+    { value: 'cybersecurity', label: 'الأمن السيبراني' },
+    { value: 'infrastructure', label: 'البنية التحتية' },
+    { value: 'digital', label: 'التحول الرقمي' },
+    { value: 'dmo', label: 'حوكمة البيانات' },
+    { value: 'support', label: 'الدعم الفني' },
+    { value: 'committee', label: 'اللجان' },
+  ];
+
+  const handleExport = async (report: ReportType, format: ExportFormat = exportFormat) => {
     setExportingId(report.id);
     try {
-      const response = await apiRequest('GET', report.endpoint);
+      const params = new URLSearchParams();
+      if (format === 'pdf') params.append('format', 'pdf');
+      if (dateFrom) params.append('from', dateFrom);
+      if (dateTo) params.append('to', dateTo);
+      if (departmentFilter !== 'all') params.append('department', departmentFilter);
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+
+      const response = await apiRequest('GET', `${report.endpoint}${queryStr}`);
 
       if (!response.ok) {
         throw new Error('Export failed');
@@ -331,7 +396,8 @@ export default function ReportsExport() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${report.filename}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      const ext = format === 'pdf' ? '.pdf' : '.xlsx';
+      a.download = `${report.filename}-${new Date().toISOString().split('T')[0]}${ext}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -339,12 +405,13 @@ export default function ReportsExport() {
 
       toast({
         title: 'تم التصدير بنجاح',
-        description: `تم تحميل ${report.title}`,
+        description: `تم تحميل ${report.title} بصيغة ${format === 'pdf' ? 'PDF' : 'Excel'}`,
       });
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'خطأ غير معروف';
       toast({
         title: 'فشل التصدير',
-        description: 'حدث خطا اثناء تصدير البيانات. تاكد من صلاحياتك.',
+        description: `حدث خطأ أثناء تصدير البيانات: ${errMsg}. تأكد من صلاحياتك.`,
         variant: 'destructive',
       });
     } finally {
@@ -361,6 +428,18 @@ export default function ReportsExport() {
       await handleExport(report);
       await new Promise(resolve => setTimeout(resolve, 500));
     }
+  };
+
+  const handleExportTemplate = async (template: ReportTemplate) => {
+    const templateReports = reports.filter(r => template.reportIds.includes(r.id));
+    for (const report of templateReports) {
+      await handleExport(report);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    toast({
+      title: 'تم تصدير القالب',
+      description: `تم تحميل ${templateReports.length} تقارير من "${template.label}"`,
+    });
   };
 
   const getCategoryCount = (catId: string) => {
@@ -387,6 +466,15 @@ export default function ReportsExport() {
           actions={
             <>
               <Button
+                variant="outline"
+                className="h-9 gap-1.5 text-xs border-white/10 text-white/70 hover:bg-white/5"
+                onClick={() => setShowFilters(!showFilters)}
+                data-testid="button-toggle-filters"
+              >
+                <Filter className="w-3.5 h-3.5" />
+                {showFilters ? 'إخفاء الفلاتر' : 'فلاتر التصدير'}
+              </Button>
+              <Button
                 className="btn-gold h-9 gap-1.5 text-xs"
                 onClick={handleExportAll}
                 disabled={exportingId !== null}
@@ -398,6 +486,146 @@ export default function ReportsExport() {
             </>
           }
         />
+
+        {/* Export Filters Panel */}
+        {showFilters && (
+          <Card className="card-premium border-[hsl(var(--gold))]/20">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-white/50 font-medium">صيغة التصدير</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setExportFormat('xlsx')}
+                      className={`flex-1 text-xs py-2 px-3 rounded-lg border transition-all ${
+                        exportFormat === 'xlsx'
+                          ? 'bg-[hsl(var(--gold))]/15 border-[hsl(var(--gold))]/40 text-[hsl(var(--gold))]'
+                          : 'border-white/10 text-white/50 hover:border-white/20'
+                      }`}
+                      data-testid="format-xlsx"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 mx-auto mb-1" />
+                      Excel
+                    </button>
+                    <button
+                      onClick={() => setExportFormat('pdf')}
+                      className={`flex-1 text-xs py-2 px-3 rounded-lg border transition-all ${
+                        exportFormat === 'pdf'
+                          ? 'bg-[hsl(var(--gold))]/15 border-[hsl(var(--gold))]/40 text-[hsl(var(--gold))]'
+                          : 'border-white/10 text-white/50 hover:border-white/20'
+                      }`}
+                      data-testid="format-pdf"
+                    >
+                      <FileText className="w-4 h-4 mx-auto mb-1" />
+                      PDF
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-white/50 font-medium">من تاريخ</label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={e => setDateFrom(e.target.value)}
+                    className="w-full text-xs py-2 px-3 rounded-lg border border-white/10 bg-white/5 text-white/80 focus:border-[hsl(var(--gold))]/40 focus:outline-none"
+                    data-testid="input-date-from"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-white/50 font-medium">إلى تاريخ</label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={e => setDateTo(e.target.value)}
+                    className="w-full text-xs py-2 px-3 rounded-lg border border-white/10 bg-white/5 text-white/80 focus:border-[hsl(var(--gold))]/40 focus:outline-none"
+                    data-testid="input-date-to"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-white/50 font-medium">الإدارة</label>
+                  <select
+                    value={departmentFilter}
+                    onChange={e => setDepartmentFilter(e.target.value)}
+                    className="w-full text-xs py-2 px-3 rounded-lg border border-white/10 bg-white/5 text-white/80 focus:border-[hsl(var(--gold))]/40 focus:outline-none"
+                    data-testid="select-department"
+                  >
+                    {departmentOptions.map(opt => (
+                      <option key={opt.value} value={opt.value} className="bg-[#0a1628] text-white">
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {(dateFrom || dateTo || departmentFilter !== 'all') && (
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5">
+                  <span className="text-[10px] text-white/40">الفلاتر النشطة:</span>
+                  {dateFrom && (
+                    <Badge variant="secondary" className="text-[10px] gap-1">
+                      من: {dateFrom}
+                      <button onClick={() => setDateFrom('')} className="hover:text-red-400">&times;</button>
+                    </Badge>
+                  )}
+                  {dateTo && (
+                    <Badge variant="secondary" className="text-[10px] gap-1">
+                      إلى: {dateTo}
+                      <button onClick={() => setDateTo('')} className="hover:text-red-400">&times;</button>
+                    </Badge>
+                  )}
+                  {departmentFilter !== 'all' && (
+                    <Badge variant="secondary" className="text-[10px] gap-1">
+                      {departmentOptions.find(d => d.value === departmentFilter)?.label}
+                      <button onClick={() => setDepartmentFilter('all')} className="hover:text-red-400">&times;</button>
+                    </Badge>
+                  )}
+                  <button
+                    onClick={() => { setDateFrom(''); setDateTo(''); setDepartmentFilter('all'); }}
+                    className="text-[10px] text-red-400/60 hover:text-red-400 mr-auto"
+                  >
+                    مسح الكل
+                  </button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Report Templates */}
+        <Card className="card-premium">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileBarChart className="w-4 h-4 hub-stat-gold" />
+              قوالب التقارير الجاهزة
+            </CardTitle>
+            <CardDescription className="text-xs">تصدير مجموعة تقارير مرتبطة بضغطة واحدة</CardDescription>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {reportTemplates.map(template => (
+                <button
+                  key={template.id}
+                  onClick={() => handleExportTemplate(template)}
+                  disabled={exportingId !== null}
+                  className="text-right p-3 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/5 hover:border-[hsl(var(--gold))]/30 transition-all group disabled:opacity-50"
+                  data-testid={`template-${template.id}`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-2 rounded-lg hub-badge-gold shrink-0 group-hover:scale-105 transition-transform">
+                      {template.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-white/80 group-hover:text-[hsl(var(--gold))] transition-colors">
+                        {template.label}
+                      </div>
+                      <div className="text-[10px] text-white/40 mt-0.5">{template.description}</div>
+                      <div className="text-[10px] text-white/30 mt-1">{template.reportIds.length} تقارير</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="card-premium">
           <CardContent className="p-4">
@@ -453,7 +681,7 @@ export default function ReportsExport() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
-                            Excel
+                            Excel / PDF
                           </Badge>
                           <Badge variant="secondary" className="text-xs">
                             {categories.find(c => c.id === report.category)?.label}
@@ -466,24 +694,36 @@ export default function ReportsExport() {
                       <CardDescription>{report.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Button
-                        className="w-full btn-navy gap-2"
-                        onClick={() => handleExport(report)}
-                        disabled={exportingId !== null}
-                        data-testid={`button-export-${report.id}`}
-                      >
-                        {exportingId === report.id ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            جاري التصدير...
-                          </>
-                        ) : (
-                          <>
-                            <Download className="w-4 h-4" />
-                            تصدير
-                          </>
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          className="flex-1 btn-navy gap-2"
+                          onClick={() => handleExport(report, 'xlsx')}
+                          disabled={exportingId !== null}
+                          data-testid={`button-export-${report.id}`}
+                        >
+                          {exportingId === report.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              جاري التصدير...
+                            </>
+                          ) : (
+                            <>
+                              <FileSpreadsheet className="w-4 h-4" />
+                              Excel
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="gap-1.5 border-white/10 text-white/60 hover:bg-white/5 hover:text-white/80"
+                          onClick={() => handleExport(report, 'pdf')}
+                          disabled={exportingId !== null}
+                          data-testid={`button-export-pdf-${report.id}`}
+                        >
+                          <FileText className="w-4 h-4" />
+                          PDF
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

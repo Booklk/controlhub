@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
@@ -15,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Users, Shield, Database, FileCheck,
   Activity, AlertTriangle, Clock, TrendingUp, Server, FileDown, FileSpreadsheet,
-  Ticket, ScrollText, MonitorCog
+  Ticket, ScrollText, MonitorCog, RefreshCw
 } from 'lucide-react';
 import { exportToPDF, exportToExcel} from '@/lib/exports';
 import { adminNavGroups } from '@/lib/navigation';
@@ -136,6 +137,7 @@ function ChartSkeleton() {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [lastUpdated] = useState(() => new Date());
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
@@ -238,6 +240,21 @@ export default function AdminDashboard() {
       portalName="بوابة مدير النظام"
     >
       <div className="space-y-6">
+        {/* Last Updated + Critical Alert Indicator */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-[11px] text-white/40">
+            <RefreshCw className="w-3 h-3" />
+            <span>آخر تحديث: {lastUpdated.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          {(stats?.activeThreats ?? 0) > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 critical-alert-pulse">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+              <span className="text-[11px] font-semibold text-red-400">
+                {stats?.activeThreats} تهديد نشط يتطلب انتباهاً فورياً
+              </span>
+            </div>
+          )}
+        </div>
         <WelcomeBanner
           userName={user?.name || 'مشرف النظام'}
           portalName="بوابة مدير النظام"
@@ -522,6 +539,15 @@ export default function AdminDashboard() {
             </div>
           </CardContent>
         </Card>
+        <style>{`
+          @keyframes criticalPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+          }
+          .critical-alert-pulse {
+            animation: criticalPulse 2s ease-in-out infinite;
+          }
+        `}</style>
       </div>
     </DashboardLayout>
   );

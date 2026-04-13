@@ -627,8 +627,10 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
   const confirmDelete = useConfirmDialog();
 
   const createBoardMutation = useMutation({
-    mutationFn: (data: typeof newBoard) =>
-      apiRequest('POST', '/api/planner/boards', { ...data, portal, departmentId }),
+    mutationFn: async (data: typeof newBoard) => {
+      const res = await apiRequest('POST', '/api/planner/boards', { ...data, portal, departmentId });
+      return res.json();
+    },
     onSuccess: () => {
       invalidatePlanner();
       setIsCreateBoardOpen(false);
@@ -637,15 +639,16 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
       setShowTemplates(true);
       toast({ title: 'تم إنشاء اللوحة بنجاح' });
     },
-    onError: () => { toast({ title: 'خطأ في إنشاء اللوحة', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في إنشاء اللوحة', description: error.message, variant: 'destructive' }); },
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: (data: any) => {
+    mutationFn: async (data: any) => {
       if (!data.title?.trim()) throw new Error('العنوان مطلوب');
       if (!data.bucketId) throw new Error('يجب اختيار المجموعة');
       if (data.startDate && data.dueDate && data.dueDate < data.startDate) throw new Error('تاريخ الاستحقاق يجب أن يكون بعد تاريخ البداية');
-      return apiRequest('POST', '/api/planner/tasks', data);
+      const res = await apiRequest('POST', '/api/planner/tasks', data);
+      return res.json();
     },
     onSuccess: () => {
       invalidatePlanner();
@@ -666,27 +669,34 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
   });
 
   const inlineCreateMutation = useMutation({
-    mutationFn: (data: { title: string; bucketId: number; boardId: number }) =>
-      apiRequest('POST', '/api/planner/tasks', { ...data, priority: 'medium', status: 'not_started' }),
+    mutationFn: async (data: { title: string; bucketId: number; boardId: number }) => {
+      const res = await apiRequest('POST', '/api/planner/tasks', { ...data, priority: 'medium', status: 'not_started' });
+      return res.json();
+    },
     onSuccess: () => {
       invalidatePlanner();
       setInlineTaskTitle('');
       setInlineTaskBucketId(null);
     },
-    onError: () => { toast({ title: 'خطأ في إنشاء المهمة', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في إنشاء المهمة', description: error.message, variant: 'destructive' }); },
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest('PUT', `/api/planner/tasks/${id}`, data),
+    mutationFn: async ({ id, ...data }: any) => {
+      const res = await apiRequest('PUT', `/api/planner/tasks/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       invalidatePlanner();
     },
-    onError: () => { toast({ title: 'خطأ في تحديث المهمة', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في تحديث المهمة', description: error.message, variant: 'destructive' }); },
   });
 
   const moveTaskMutation = useMutation({
-    mutationFn: ({ id, bucketId }: { id: number; bucketId: number }) =>
-      apiRequest('PUT', `/api/planner/tasks/${id}/move`, { bucketId }),
+    mutationFn: async ({ id, bucketId }: { id: number; bucketId: number }) => {
+      const res = await apiRequest('PUT', `/api/planner/tasks/${id}/move`, { bucketId });
+      return res.json();
+    },
     onMutate: async ({ id, bucketId }) => {
       await queryClient.cancelQueries({ queryKey: ['/api/planner/boards', selectedBoardId] });
       const prev = queryClient.getQueryData<PlannerBoardData>(['/api/planner/boards', selectedBoardId]);
@@ -708,15 +718,18 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
       }
       return { prev };
     },
-    onError: (_err, _vars, context) => {
+    onError: (_err: Error, _vars, context) => {
       if (context?.prev) queryClient.setQueryData(['/api/planner/boards', selectedBoardId], context.prev);
-      toast({ title: 'خطأ في نقل المهمة', variant: 'destructive' });
+      toast({ title: 'خطأ في نقل المهمة', description: _err.message, variant: 'destructive' });
     },
     onSettled: () => invalidatePlanner(),
   });
 
   const deleteTaskMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/planner/tasks/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/planner/tasks/${id}`);
+      return res.json();
+    },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ['/api/planner/boards', selectedBoardId] });
       const prev = queryClient.getQueryData<PlannerBoardData>(['/api/planner/boards', selectedBoardId]);
@@ -728,9 +741,9 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
       }
       return { prev };
     },
-    onError: (_err, _id, context) => {
+    onError: (_err: Error, _id, context) => {
       if (context?.prev) queryClient.setQueryData(['/api/planner/boards', selectedBoardId], context.prev);
-      toast({ title: 'خطأ في حذف المهمة', variant: 'destructive' });
+      toast({ title: 'خطأ في حذف المهمة', description: _err.message, variant: 'destructive' });
     },
     onSettled: () => invalidatePlanner(),
     onSuccess: () => {
@@ -740,71 +753,92 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
   });
 
   const deleteBoardMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/planner/boards/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/planner/boards/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       invalidatePlanner();
       setSelectedBoardId(null);
       toast({ title: 'تم حذف اللوحة' });
     },
-    onError: () => { toast({ title: 'خطأ في حذف اللوحة', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في حذف اللوحة', description: error.message, variant: 'destructive' }); },
   });
 
   const createBucketMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/planner/buckets', data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('POST', '/api/planner/buckets', data);
+      return res.json();
+    },
     onSuccess: () => {
       invalidatePlanner();
       setIsCreateBucketOpen(false);
       setNewBucket({ title: '', color: '#6366f1' });
       toast({ title: 'تم إنشاء المجموعة' });
     },
-    onError: () => { toast({ title: 'خطأ في إنشاء المجموعة', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في إنشاء المجموعة', description: error.message, variant: 'destructive' }); },
   });
 
   const deleteBucketMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/planner/buckets/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/planner/buckets/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/planner/boards', selectedBoardId] });
       toast({ title: 'تم حذف المجموعة' });
     },
-    onError: () => { toast({ title: 'خطأ في حذف المجموعة', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في حذف المجموعة', description: error.message, variant: 'destructive' }); },
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: ({ taskId, content }: { taskId: number; content: string }) =>
-      apiRequest('POST', `/api/planner/tasks/${taskId}/comments`, { content }),
+    mutationFn: async ({ taskId, content }: { taskId: number; content: string }) => {
+      const res = await apiRequest('POST', `/api/planner/tasks/${taskId}/comments`, { content });
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/planner/tasks', selectedTask?.id, 'comments'] });
       setCommentText('');
     },
-    onError: () => { toast({ title: 'خطأ في إضافة التعليق', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في إضافة التعليق', description: error.message, variant: 'destructive' }); },
   });
 
   const duplicateTaskMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('POST', `/api/planner/tasks/${id}/duplicate`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('POST', `/api/planner/tasks/${id}/duplicate`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/planner/boards', selectedBoardId] });
       queryClient.invalidateQueries({ queryKey: ['/api/planner/my-tasks'] });
       toast({ title: 'تم نسخ المهمة بنجاح' });
     },
-    onError: () => { toast({ title: 'خطأ في نسخ المهمة', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في نسخ المهمة', description: error.message, variant: 'destructive' }); },
   });
 
   const saveTemplateMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('POST', `/api/planner/tasks/${id}/save-template`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('POST', `/api/planner/tasks/${id}/save-template`);
+      return res.json();
+    },
     onSuccess: () => { toast({ title: 'تم حفظ القالب بنجاح' }); },
-    onError: () => { toast({ title: 'خطأ في حفظ القالب', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في حفظ القالب', description: error.message, variant: 'destructive' }); },
   });
 
   const notifyMutation = useMutation({
-    mutationFn: ({ id, type }: { id: number; type: string }) =>
-      apiRequest('POST', `/api/planner/tasks/${id}/notify`, { type }),
+    mutationFn: async ({ id, type }: { id: number; type: string }) => {
+      const res = await apiRequest('POST', `/api/planner/tasks/${id}/notify`, { type });
+      return res.json();
+    },
     onSuccess: () => { toast({ title: 'تم إرسال الإشعار بنجاح' }); },
-    onError: () => { toast({ title: 'خطأ في إرسال الإشعار', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في إرسال الإشعار', description: error.message, variant: 'destructive' }); },
   });
 
   const sendToTasksMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: number; targetDepartmentId: string; notes: string }) =>
-      apiRequest('POST', `/api/planner/tasks/${id}/send-to-tasks`, data),
+    mutationFn: async ({ id, ...data }: { id: number; targetDepartmentId: string; notes: string }) => {
+      const res = await apiRequest('POST', `/api/planner/tasks/${id}/send-to-tasks`, data);
+      return res.json();
+    },
     onSuccess: () => {
       const selectedDeptId = sendToTasksData.targetDepartmentId;
       setIsSendToTasksOpen(false);
@@ -815,7 +849,7 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
         description: `المهمة الآن في صفحة مهام ${deptName} وجاهزة للإحالة`
       });
     },
-    onError: () => toast({ title: 'خطأ في نقل المهمة', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'خطأ في نقل المهمة', description: error.message, variant: 'destructive' }),
   });
 
   const uploadAttachmentMutation = useMutation({
@@ -835,27 +869,31 @@ export default function PlannerBoard({ portal, navGroups, departmentId }: Props)
       queryClient.invalidateQueries({ queryKey: ['/api/planner/boards', selectedBoardId] });
       toast({ title: 'تم رفع المرفق بنجاح' });
     },
-    onError: () => { toast({ title: 'خطأ في رفع المرفق', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في رفع المرفق', description: error.message, variant: 'destructive' }); },
   });
 
   const deleteAttachmentMutation = useMutation({
-    mutationFn: ({ id, index }: { id: number; index: number }) =>
-      apiRequest('DELETE', `/api/planner/tasks/${id}/attachments/${index}`),
+    mutationFn: async ({ id, index }: { id: number; index: number }) => {
+      const res = await apiRequest('DELETE', `/api/planner/tasks/${id}/attachments/${index}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/planner/boards', selectedBoardId] });
       toast({ title: 'تم حذف المرفق' });
     },
-    onError: () => { toast({ title: 'خطأ في حذف المرفق', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في حذف المرفق', description: error.message, variant: 'destructive' }); },
   });
 
   const updateDependenciesMutation = useMutation({
-    mutationFn: ({ id, dependencies }: { id: number; dependencies: number[] }) =>
-      apiRequest('PUT', `/api/planner/tasks/${id}/dependencies`, { dependencies }),
+    mutationFn: async ({ id, dependencies }: { id: number; dependencies: number[] }) => {
+      const res = await apiRequest('PUT', `/api/planner/tasks/${id}/dependencies`, { dependencies });
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/planner/boards', selectedBoardId] });
       toast({ title: 'تم تحديث التبعيات' });
     },
-    onError: () => { toast({ title: 'خطأ في تحديث التبعيات', variant: 'destructive' }); },
+    onError: (error: Error) => { toast({ title: 'خطأ في تحديث التبعيات', description: error.message, variant: 'destructive' }); },
   });
 
   const handleRequestCompletion = (task: PlannerTask) => {
