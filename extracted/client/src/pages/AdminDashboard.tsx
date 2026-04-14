@@ -8,7 +8,7 @@ import { SmartBookmarks } from '@/components/SmartBookmarks';
 import { QuickNotes } from '@/components/QuickNotes';
 import { GovernanceScoreCard } from '@/components/GovernanceScoreCard';
 import { WelcomeBanner } from '@/components/WelcomeBanner';
-import { EnhancedStatCard, RiskHeatMap, LiveActivityFeed, ComplianceRing, QuickActionsHub } from '@/components/AdvancedWidgets';
+import { EnhancedStatCard, RiskHeatMap, ComplianceRing, QuickActionsHub } from '@/components/AdvancedWidgets';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';

@@ -713,6 +713,59 @@ export default function ITDirectorDashboard() {
           <QuickNotes portal="it-director" />
         </div>
 
+        {/* ── Smart Recommendations ── */}
+        {Array.isArray(smartRecommendations) && smartRecommendations.length > 0 && (
+          <Card className="card-premium" data-testid="smart-recommendations">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Zap className="w-5 h-5 hub-stat-gold" />
+                    توصيات ذكية
+                  </CardTitle>
+                  <CardDescription>اقتراحات تحسين مبنية على تحليل البيانات</CardDescription>
+                </div>
+                <Badge className="bg-[hsl(43_74%_49%)]/15 text-[hsl(43_74%_49%)] border-[hsl(43_74%_49%)]/30 text-xs">
+                  {smartRecommendations.length} توصية
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {smartRecommendations.slice(0, 6).map((rec: any, idx: number) => {
+                  const priorityStyles: Record<string, { border: string; icon: string; bg: string }> = {
+                    high: { border: 'border-red-500/25', icon: 'text-red-400', bg: 'bg-red-500/10' },
+                    medium: { border: 'border-amber-500/25', icon: 'text-amber-400', bg: 'bg-amber-500/10' },
+                    low: { border: 'border-emerald-500/25', icon: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                  };
+                  const style = priorityStyles[rec.priority] || priorityStyles.medium;
+                  return (
+                    <div key={rec.id || idx} className={`p-4 rounded-xl border ${style.border} bg-gradient-to-l from-transparent to-white/[0.01] hover:bg-white/[0.02] transition-all`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-lg ${style.bg} flex items-center justify-center shrink-0`}>
+                          <Zap className={`w-4 h-4 ${style.icon}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold mb-1 line-clamp-2">{rec.title || rec.message || 'توصية'}</p>
+                          {rec.description && <p className="text-[11px] text-muted-foreground line-clamp-2">{rec.description}</p>}
+                          <div className="flex items-center gap-2 mt-2">
+                            {rec.category && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-muted-foreground">{rec.category}</span>
+                            )}
+                            {rec.impact && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[hsl(43_74%_49%)]/10 hub-stat-gold">تأثير: {rec.impact}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* ── Compliance Overview ── */}
         <Card className="card-premium">
           <CardHeader>
@@ -1220,11 +1273,30 @@ export default function ITDirectorDashboard() {
           {/* Escalations + Performance Summary */}
           <div className="space-y-6">
             <Card className="card-premium">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 hub-stat-gold" />
-                  التصعيدات المعلقة
-                </CardTitle>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 hub-stat-gold" />
+                    التصعيدات المعلقة
+                  </CardTitle>
+                  {pendingEscalations && pendingEscalations.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-sm font-bold px-3 py-1 ${
+                        pendingEscalations.some((e: any) => e.priority === 'urgent' || e.priority === 'critical')
+                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                      }`}>
+                        {pendingEscalations.length} تصعيد
+                      </Badge>
+                      {pendingEscalations.some((e: any) => e.priority === 'urgent' || e.priority === 'critical') && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/25">
+                          <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                          <span className="text-[10px] font-bold text-red-400">عاجل</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">

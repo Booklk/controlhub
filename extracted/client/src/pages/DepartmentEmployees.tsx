@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, getAuthToken } from "@/lib/auth";
-import { UserPlus, Mail, Search, Users, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { UserPlus, Mail, Search, Users, CheckCircle2, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NavGroup } from "@/lib/navigation";
 
@@ -154,8 +154,17 @@ export default function DepartmentEmployees({ navGroups, portalName }: Props) {
           <Card>
             <CardContent className="py-12 text-center">
               <Users className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">لا يوجد موظفين حالياً</p>
-              <p className="text-sm text-muted-foreground mt-1">اضغط "إضافة موظف" لإضافة أول موظف</p>
+              <p className="text-muted-foreground font-medium">
+                {searchTerm ? "لا توجد نتائج مطابقة للبحث" : "لا يوجد موظفين حالياً"}
+              </p>
+              <p className="text-sm text-muted-foreground/60 mt-1">
+                {searchTerm ? "جرّب البحث بكلمات أخرى" : 'اضغط "إضافة موظف" لإضافة أول موظف'}
+              </p>
+              {searchTerm && (
+                <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => setSearchTerm("")}>
+                  مسح البحث
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -199,7 +208,7 @@ export default function DepartmentEmployees({ navGroups, portalName }: Props) {
           </div>
         )}
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) { setNewName(""); setNewEmail(""); } }}>
           <DialogContent className="sm:max-w-md" dir="rtl">
             <DialogHeader>
               <DialogTitle>إضافة موظف جديد</DialogTitle>
@@ -249,9 +258,11 @@ export default function DepartmentEmployees({ navGroups, portalName }: Props) {
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={addEmployeeMutation.isPending}
+                disabled={addEmployeeMutation.isPending || !newName.trim() || !newEmail.trim()}
+                className="gap-1.5"
                 data-testid="button-submit-employee"
               >
+                {addEmployeeMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {addEmployeeMutation.isPending ? "جاري الإضافة..." : "إضافة الموظف"}
               </Button>
             </DialogFooter>
