@@ -3396,7 +3396,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       };
       const isGlobalUser = ['system_admin', 'it_director'].includes(req.user.role);
       const userDeptId = req.user.itDepartmentId || EXT_PORTAL_DEPT_PUT[req.user.portal];
-      if (!isGlobalUser && existing && existing.departmentId && existing.departmentId !== userDeptId) {
+      if (!isGlobalUser && existing && existing.departmentId && Number(existing.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'غير مصرح لك بتعديل نظام تابع لإدارة أخرى' });
       }
       const sanitizedBody = stripProtectedFields(req.body);
@@ -3452,7 +3452,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       };
       const isGlobalUser = ['system_admin', 'it_director'].includes(req.user.role);
       const userDeptId = req.user.itDepartmentId || EXT_PORTAL_DEPT_DEL[req.user.portal];
-      if (!isGlobalUser && existing && existing.departmentId && existing.departmentId !== userDeptId) {
+      if (!isGlobalUser && existing && existing.departmentId && Number(existing.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'غير مصرح لك بحذف نظام تابع لإدارة أخرى' });
       }
       await db.delete(externalSystems).where(eq(externalSystems.id, id));
@@ -4428,7 +4428,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
       const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
-      if (!isITDirector && !isAdmin && document.departmentId !== userDeptId) {
+      if (!isITDirector && !isAdmin && Number(document.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك الوصول لهذا المستند' });
       }
       await db.update(documents).set({ downloadCount: (document.downloadCount || 0) + 1 }).where(eq(documents.id, document.id));
@@ -4444,10 +4444,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!departmentId) {
         return res.status(400).json({ error: 'معرف الإدارة مطلوب' });
       }
-      const isAdmin = req.user.role === 'system_admin';
-      const isITDirector = req.user.portal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
-      if (!isITDirector && !isAdmin && departmentId !== userDeptId) {
+      const isAdmin = req.user.role === 'system_admin' || req.user.role === 'admin';
+      const isITDirector = req.user.role === 'it_director';
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
+      if (!isITDirector && !isAdmin && Number(departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك إنشاء مستند في هذه الإدارة' });
       }
       const docValues = {
@@ -4498,7 +4498,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
       const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
-      if (!isITDirector && !isAdmin && existing.departmentId !== userDeptId) {
+      if (!isITDirector && !isAdmin && Number(existing.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك تعديل هذا المستند' });
       }
       const [updated] = await db.update(documents)
@@ -4522,7 +4522,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
       const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
-      if (!isITDirector && !isAdmin && doc.departmentId !== userDeptId) {
+      if (!isITDirector && !isAdmin && Number(doc.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك تحميل هذا المستند' });
       }
 
@@ -4560,7 +4560,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
       const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
-      if (!isITDirector && !isAdmin && existing.departmentId !== userDeptId) {
+      if (!isITDirector && !isAdmin && Number(existing.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك رفع ملف لهذا المستند' });
       }
 
@@ -4603,7 +4603,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
       const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
-      if (!isITDirector && !isAdmin && existing.departmentId !== userDeptId) {
+      if (!isITDirector && !isAdmin && Number(existing.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك حذف هذا المستند' });
       }
       await db.delete(documents).where(eq(documents.id, id));
