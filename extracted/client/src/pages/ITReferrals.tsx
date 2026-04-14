@@ -145,7 +145,7 @@ export default function ITReferrals() {
   const [isOutlookOpen, setIsOutlookOpen] = useState(false);
 
   const PORTAL_DEPT_MAP: Record<string, number> = { dmo: 5, infrastructure: 9, cybersecurity: 10, digital_transformation: 11, support: 12 };
-  const userDeptId = user?.itDepartmentId || PORTAL_DEPT_MAP[user?.portal || ''] || 9;
+  const userDeptId = PORTAL_DEPT_MAP[user?.portal || ''] || user?.itDepartmentId || 9;
 
   const [newReferral, setNewReferral] = useState({
     type: "ticket", title: "", description: "", priority: "medium",

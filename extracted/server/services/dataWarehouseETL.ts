@@ -492,24 +492,45 @@ export async function runFullETL(): Promise<{ success: boolean; results: Record<
 }
 
 // ==================== جدولة ETL تلقائية ====================
+// فحص وجود جداول الداتا ويرهاوس
+async function checkDWTablesExist(): Promise<boolean> {
+  try {
+    const [r] = await db.execute(sql`
+      SELECT COUNT(*)::int as cnt FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name LIKE 'dw_%'
+    `);
+    const cnt = Number((r as any).rows?.[0]?.cnt || (r as any)[0]?.cnt || 0);
+    return cnt >= 5;
+  } catch {
+    return false;
+  }
+}
+
 export function startETLScheduler() {
-  // تشغيل أولي بعد 30 ثانية من بدء السيرفر
+  // تشغيل أولي بعد 60 ثانية من بدء السيرفر
   setTimeout(async () => {
     try {
+      const tablesExist = await checkDWTablesExist();
+      if (!tablesExist) {
+        logger.warn('DW tables not found - run "npm run db:push" to create them. ETL skipped.');
+        return;
+      }
       await runFullETL();
     } catch (e) {
       logger.error('Initial ETL run failed', { error: (e as Error).message });
     }
-  }, 30000);
+  }, 60000);
 
   // تشغيل يومي كل 24 ساعة
   setInterval(async () => {
     try {
+      const tablesExist = await checkDWTablesExist();
+      if (!tablesExist) return;
       await runFullETL();
     } catch (e) {
       logger.error('Scheduled ETL run failed', { error: (e as Error).message });
     }
   }, 24 * 60 * 60 * 1000);
 
-  logger.info('ETL scheduler started: runs daily + initial run in 30s');
+  logger.info('ETL scheduler started: runs daily + initial run in 60s');
 }

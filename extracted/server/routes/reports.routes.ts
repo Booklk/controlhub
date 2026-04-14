@@ -24,12 +24,16 @@ const REPORT_TYPES: Record<string, { nameAr: string; category: string }> = {
 async function generateReportNumber(type: string): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = type.toUpperCase().replace(/_/g, '-');
-  const [r] = await db.execute(sql`
-    SELECT COUNT(*)::int + 1 as next_num FROM dw_etl_log
-    WHERE run_type LIKE ${'report_%'} AND started_at >= ${`${year}-01-01`}::date
-  `);
-  const num = Number((r as any).rows?.[0]?.next_num || (r as any)[0]?.next_num || 1);
-  return `RPT-${prefix}-${year}-${String(num).padStart(4, '0')}`;
+  try {
+    const [r] = await db.execute(sql`
+      SELECT COUNT(*)::int + 1 as next_num FROM dw_etl_log
+      WHERE run_type LIKE ${'report_%'} AND started_at >= ${`${year}-01-01`}::date
+    `);
+    const num = Number((r as any).rows?.[0]?.next_num || (r as any)[0]?.next_num || 1);
+    return `RPT-${prefix}-${year}-${String(num).padStart(4, '0')}`;
+  } catch {
+    return `RPT-${prefix}-${year}-${String(Date.now() % 10000).padStart(4, '0')}`;
+  }
 }
 
 export function registerReportRoutes(app: Express) {
@@ -282,8 +286,9 @@ export function registerReportRoutes(app: Express) {
         reportType: r.run_type.replace('report_', ''),
         reportTitle: REPORT_TYPES[r.run_type.replace('report_', '')]?.nameAr || r.run_type,
       })));
-    } catch (error) {
-      res.status(500).json({ error: 'حدث خطأ في جلب سجل التقارير' });
+    } catch {
+      // الجدول ممكن ما يكون موجود بعد - ارجع قائمة فارغة
+      res.json([]);
     }
   });
 

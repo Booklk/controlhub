@@ -13,6 +13,14 @@ import {
 } from "./shared";
 import { runFullETL, startETLScheduler } from "../services/dataWarehouseETL";
 
+// فحص وجود جداول DW
+async function dwTablesReady(): Promise<boolean> {
+  try {
+    const [r] = await db.execute(sql`SELECT COUNT(*)::int as cnt FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'dw_%'`);
+    return Number((r as any).rows?.[0]?.cnt || (r as any)[0]?.cnt || 0) >= 5;
+  } catch { return false; }
+}
+
 export function registerDataWarehouseRoutes(app: Express) {
 
   const DW_ALLOWED_PORTALS = [...new Set([...DMO_PORTALS, ...ADMIN_PORTALS, ...IT_DIRECTOR_PORTALS])];
