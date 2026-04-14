@@ -125,7 +125,7 @@ export default function TicketsManagement() {
   });
 
   const { data: deptUsers = [] } = useQuery<{ id: number; name: string; email: string; role: string }[]>({
-    queryKey: ['/api/department-users'],
+    queryKey: ['/api/users-list'],
   });
 
   const handleRefresh = async () => {
