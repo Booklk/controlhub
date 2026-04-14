@@ -1,12 +1,12 @@
 {
-  "name": "Control Hub - JCSA",
+  "name": "مركز التحكم - Control Hub",
   "short_name": "Control Hub",
-  "description": "نظام إدارة الحوكمة والامتثال - نادي سباقات الخيل",
+  "description": "منصة حوكمة تقنية المعلومات - نادي سباقات الخيل",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#c9a227",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "lang": "ar",
   "dir": "rtl",
   "icons": [

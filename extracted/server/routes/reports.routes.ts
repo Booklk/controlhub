@@ -287,4 +287,29 @@ export function registerReportRoutes(app: Express) {
     }
   });
 
+  // ==================== جدولة التقارير ====================
+  app.post("/api/reports/schedule", authenticateToken, requirePortal(REPORT_PORTALS), async (req: any, res) => {
+    try {
+      if (!REPORT_ROLES.includes(req.user?.role)) return res.status(403).json({ error: 'صلاحية غير كافية' });
+      const { reportType, frequency, email } = req.body;
+      if (!reportType || !frequency) return res.status(400).json({ error: 'نوع التقرير والتكرار مطلوبان' });
+      // Store schedule
+      await db.execute(sql`
+        INSERT INTO dw_etl_log (run_type, status, records_processed, completed_at)
+        VALUES (${'schedule_' + reportType + '_' + frequency}, 'scheduled', 0, NOW())
+      `);
+      res.json({ success: true, message: `تم جدولة تقرير ${REPORT_TYPES[reportType]?.nameAr || reportType} (${frequency === 'weekly' ? 'أسبوعياً' : frequency === 'monthly' ? 'شهرياً' : 'ربع سنوي'})` });
+    } catch (error) { res.status(500).json({ error: 'خطأ في جدولة التقرير' }); }
+  });
+
+  app.get("/api/reports/schedules", authenticateToken, requirePortal(REPORT_PORTALS), async (req: any, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT id, run_type, status, started_at FROM dw_etl_log
+        WHERE run_type LIKE 'schedule_%' ORDER BY started_at DESC LIMIT 20
+      `);
+      res.json((result as any).rows || result);
+    } catch (error) { res.status(500).json({ error: 'خطأ' }); }
+  });
+
 }

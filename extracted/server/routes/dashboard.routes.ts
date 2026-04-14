@@ -629,13 +629,66 @@ export function registerDashboardRoutes(app: Express) {
       if (!query || query.length < 2) {
         return res.json({ results: [], categories: [] });
       }
-      
+
       const results: any[] = [];
       const categoryCounts: Record<string, number> = {
         all: 0, ticket: 0, project: 0, task: 0, kb: 0, user: 0, referral: 0, decision: 0, meeting: 0,
       };
-      
+
       const searchPattern = `%${query}%`;
+
+      // Helper: compute relevance score for a result
+      const computeScore = (title: string, subtitle: string, type: string, extras?: { priority?: string; status?: string; createdAt?: any }) => {
+        let score = 0;
+        const lTitle = (title || '').toLowerCase();
+        const lSubtitle = (subtitle || '').toLowerCase();
+        // Exact title match
+        if (lTitle === query) score += 100;
+        // Title starts with query
+        else if (lTitle.startsWith(query)) score += 80;
+        // Title contains query
+        else if (lTitle.includes(query)) score += 60;
+        // Subtitle match
+        if (lSubtitle.includes(query)) score += 20;
+        // Boost high priority items
+        if (extras?.priority === 'urgent' || extras?.priority === 'critical') score += 15;
+        else if (extras?.priority === 'high') score += 10;
+        // Boost active items
+        if (extras?.status === 'open' || extras?.status === 'in_progress' || extras?.status === 'active') score += 10;
+        // Recency boost
+        if (extras?.createdAt) {
+          const age = Date.now() - new Date(extras.createdAt).getTime();
+          const dayMs = 86400000;
+          if (age < dayMs) score += 20;
+          else if (age < 7 * dayMs) score += 10;
+          else if (age < 30 * dayMs) score += 5;
+        }
+        return score;
+      };
+
+      // Helper: highlight matching text
+      const highlightMatch = (text: string) => {
+        if (!text) return { text, highlights: [] };
+        const lower = text.toLowerCase();
+        const idx = lower.indexOf(query);
+        if (idx === -1) return { text, highlights: [] };
+        return {
+          text,
+          highlights: [{ start: idx, end: idx + query.length }],
+        };
+      };
+
+      // Type icon mapping
+      const typeIcons: Record<string, { icon: string; color: string; label: string }> = {
+        ticket: { icon: 'Ticket', color: '#3b82f6', label: 'تذكرة' },
+        project: { icon: 'FolderKanban', color: '#8b5cf6', label: 'مشروع' },
+        task: { icon: 'CheckSquare', color: '#10b981', label: 'مهمة' },
+        kb: { icon: 'BookOpen', color: '#f59e0b', label: 'قاعدة معرفة' },
+        user: { icon: 'User', color: '#6366f1', label: 'مستخدم' },
+        referral: { icon: 'ArrowRightLeft', color: '#ec4899', label: 'إحالة' },
+        decision: { icon: 'Gavel', color: '#14b8a6', label: 'قرار' },
+        meeting: { icon: 'Calendar', color: '#f97316', label: 'محضر اجتماع' },
+      };
       
       if ((!category || category === 'all' || category === 'ticket') && isITPortal) {
         const ticketConditions: any[] = [
@@ -665,12 +718,16 @@ export function registerDashboardRoutes(app: Express) {
           userPortal === 'dmo' ? '/dmo' : '/it-director';
         
         matchedTickets.forEach((t: any) => {
+          const subtitle = `#${t.id} • ${t.status === 'open' ? 'مفتوحة' : t.status === 'in_progress' ? 'قيد العمل' : t.status === 'resolved' ? 'محلولة' : t.status}`;
           results.push({
             id: `ticket-${t.id}`, type: 'ticket',
-            title: t.title, subtitle: `#${t.id} • ${t.status === 'open' ? 'مفتوحة' : t.status === 'in_progress' ? 'قيد العمل' : t.status === 'resolved' ? 'محلولة' : t.status}`,
+            title: t.title, subtitle,
             priority: t.priority, status: t.status,
             url: `${portalBase}/tickets`,
             createdAt: t.createdAt,
+            score: computeScore(t.title, subtitle, 'ticket', { priority: t.priority, status: t.status, createdAt: t.createdAt }),
+            titleHighlight: highlightMatch(t.title),
+            typeIcon: typeIcons.ticket,
           });
         });
         categoryCounts.ticket = matchedTickets.length;
@@ -688,11 +745,15 @@ export function registerDashboardRoutes(app: Express) {
           )).limit(6);
         
         matchedProjects.forEach((p: any) => {
+          const subtitle = p.nameEn || '';
           results.push({
             id: `project-${p.id}`, type: 'project',
-            title: p.nameAr, subtitle: p.nameEn || '',
+            title: p.nameAr, subtitle,
             status: p.status,
             url: `/it-director/projects`,
+            score: computeScore(p.nameAr, subtitle, 'project', { status: p.status }),
+            titleHighlight: highlightMatch(p.nameAr),
+            typeIcon: typeIcons.project,
           });
         });
         categoryCounts.project = matchedProjects.length;
@@ -716,12 +777,15 @@ export function registerDashboardRoutes(app: Express) {
           }).from(plannerTasks).where(and(...taskConditions)).limit(8);
           
           matchedTasks.forEach((t: any) => {
+            const subtitle = t.dueDate ? `تستحق: ${new Date(t.dueDate).toLocaleDateString('ar-SA')}` : (t.status || '');
             results.push({
               id: `task-${t.id}`, type: 'task',
-              title: t.title,
-              subtitle: t.dueDate ? `تستحق: ${new Date(t.dueDate).toLocaleDateString('ar-SA')}` : (t.status || ''),
+              title: t.title, subtitle,
               status: t.status, priority: t.priority,
               url: userPortal === 'employee' ? '/employee/planner' : `/${userPortal}/planner`,
+              score: computeScore(t.title, subtitle, 'task', { priority: t.priority, status: t.status }),
+              titleHighlight: highlightMatch(t.title),
+              typeIcon: typeIcons.task,
             });
           });
           categoryCounts.task = matchedTasks.length;
@@ -741,11 +805,14 @@ export function registerDashboardRoutes(app: Express) {
           )).limit(5);
         
         matchedKB.forEach((k: any) => {
+          const subtitle = k.category ? `تصنيف: ${k.category}` : `${k.views || 0} مشاهدة`;
           results.push({
             id: `kb-${k.id}`, type: 'kb',
-            title: k.title,
-            subtitle: k.category ? `تصنيف: ${k.category}` : `${k.views || 0} مشاهدة`,
+            title: k.title, subtitle,
             url: `/dmo/knowledge-base`,
+            score: computeScore(k.title, subtitle, 'kb'),
+            titleHighlight: highlightMatch(k.title),
+            typeIcon: typeIcons.kb,
           });
         });
         categoryCounts.kb = matchedKB.length;
@@ -766,12 +833,16 @@ export function registerDashboardRoutes(app: Express) {
           )).limit(5);
         
         matchedUsers.forEach((u: any) => {
+          const title = u.name || u.nameEn || u.email;
+          const subtitle = u.email;
           results.push({
             id: `user-${u.id}`, type: 'user',
-            title: u.name || u.nameEn || u.email,
-            subtitle: u.email,
+            title, subtitle,
             role: u.role, portal: u.portal,
             url: `/admin/users`,
+            score: computeScore(title, subtitle, 'user'),
+            titleHighlight: highlightMatch(title),
+            typeIcon: typeIcons.user,
           });
         });
         categoryCounts.user = matchedUsers.length;
@@ -804,13 +875,17 @@ export function registerDashboardRoutes(app: Express) {
           userPortal === 'dmo' ? '/dmo' : '/it-director';
         
         matchedRefs.forEach((r: any) => {
+          const title = r.title || `إحالة #${r.id}`;
+          const subtitle = `#${r.id} • ${r.status === 'pending' ? 'معلقة' : r.status === 'acknowledged' ? 'مستلمة' : r.status === 'completed' ? 'مكتملة' : r.status}`;
           results.push({
             id: `referral-${r.id}`, type: 'referral',
-            title: r.title || `إحالة #${r.id}`,
-            subtitle: `#${r.id} • ${r.status === 'pending' ? 'معلقة' : r.status === 'acknowledged' ? 'مستلمة' : r.status === 'completed' ? 'مكتملة' : r.status}`,
+            title, subtitle,
             priority: r.priority, status: r.status,
             url: `${refPortalBase}/referrals`,
             createdAt: r.createdAt,
+            score: computeScore(title, subtitle, 'referral', { priority: r.priority, status: r.status, createdAt: r.createdAt }),
+            titleHighlight: highlightMatch(title),
+            typeIcon: typeIcons.referral,
           });
         });
         categoryCounts.referral = matchedRefs.length;
@@ -830,12 +905,15 @@ export function registerDashboardRoutes(app: Express) {
             )).limit(5);
           
           matchedDecisions.forEach((d: any) => {
+            const subtitle = d.createdAt ? `تاريخ: ${new Date(d.createdAt).toLocaleDateString('ar-SA')}` : (d.status || '');
             results.push({
               id: `decision-${d.id}`, type: 'decision',
-              title: d.title,
-              subtitle: d.createdAt ? `تاريخ: ${new Date(d.createdAt).toLocaleDateString('ar-SA')}` : (d.status || ''),
+              title: d.title, subtitle,
               status: d.status, priority: d.priority,
               url: '/committee/decisions',
+              score: computeScore(d.title, subtitle, 'decision', { priority: d.priority, status: d.status, createdAt: d.createdAt }),
+              titleHighlight: highlightMatch(d.title),
+              typeIcon: typeIcons.decision,
             });
           });
           categoryCounts.decision = matchedDecisions.length;

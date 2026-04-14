@@ -252,3 +252,103 @@ export function notifyITDepartments(itDepartmentIds: number[], type: Notificatio
 export function broadcastNotification(type: NotificationMessage['type'], data: any) {
   notificationHub.broadcast({ type, data, timestamp: new Date() });
 }
+
+// ==================== Event-Driven Broadcast Helpers ====================
+
+/**
+ * بث إشعار عند إنشاء تذكرة جديدة
+ * Broadcast when a new ticket is created
+ */
+export function broadcastTicketCreated(ticket: { id: number; title: string; priority: string; category?: string; ticketNumber?: string }) {
+  const message: NotificationMessage = {
+    type: 'update',
+    data: {
+      event: 'ticket_created',
+      ticket: {
+        id: ticket.id,
+        title: ticket.title,
+        priority: ticket.priority,
+        category: ticket.category || 'عام',
+        ticketNumber: ticket.ticketNumber || `TKT-${ticket.id}`,
+      },
+      message: `تذكرة جديدة: ${ticket.title}`,
+    },
+    timestamp: new Date(),
+  };
+  // Notify IT portals about new tickets
+  notificationHub.sendToPortals(['it_director', 'admin', 'super_admin'], message);
+  logger.info(`[WebSocket] Broadcast ticket_created: TKT-${ticket.id}`);
+}
+
+/**
+ * بث إشعار عند حل تذكرة
+ * Broadcast when a ticket is resolved/closed
+ */
+export function broadcastTicketResolved(ticket: { id: number; title: string; status: string; resolvedById?: number; ticketNumber?: string }) {
+  const message: NotificationMessage = {
+    type: 'update',
+    data: {
+      event: 'ticket_resolved',
+      ticket: {
+        id: ticket.id,
+        title: ticket.title,
+        status: ticket.status,
+        ticketNumber: ticket.ticketNumber || `TKT-${ticket.id}`,
+      },
+      message: `تم حل التذكرة: ${ticket.title}`,
+    },
+    timestamp: new Date(),
+  };
+  notificationHub.sendToPortals(['it_director', 'admin', 'super_admin'], message);
+  logger.info(`[WebSocket] Broadcast ticket_resolved: TKT-${ticket.id}`);
+}
+
+/**
+ * بث إشعار عند إسناد مهمة
+ * Broadcast when a task is assigned to a user
+ */
+export function broadcastTaskAssigned(task: { id: number; title: string; priority?: string; dueDate?: string | Date | null }, assignedToId: number, assignedById: number) {
+  const message: NotificationMessage = {
+    type: 'update',
+    data: {
+      event: 'task_assigned',
+      task: {
+        id: task.id,
+        title: task.title,
+        priority: task.priority || 'medium',
+        dueDate: task.dueDate || null,
+      },
+      assignedToId,
+      assignedById,
+      message: `مهمة جديدة مسندة إليك: ${task.title}`,
+    },
+    timestamp: new Date(),
+  };
+  // Send directly to the assigned user
+  notificationHub.sendToUsers([assignedToId], message);
+  logger.info(`[WebSocket] Broadcast task_assigned: task ${task.id} -> user ${assignedToId}`);
+}
+
+/**
+ * بث إشعار عند تجاوز اتفاقية مستوى الخدمة
+ * Broadcast when an SLA breach occurs
+ */
+export function broadcastSLABreach(breach: { id: number; impactLevel: string; slaId?: number }, slaTitle: string) {
+  const message: NotificationMessage = {
+    type: 'alert',
+    data: {
+      event: 'sla_breach',
+      breach: {
+        id: breach.id,
+        impactLevel: breach.impactLevel,
+        slaId: breach.slaId,
+      },
+      slaTitle,
+      message: `تنبيه: تجاوز اتفاقية SLA — ${slaTitle}`,
+    },
+    timestamp: new Date(),
+  };
+  // SLA breaches are critical — notify all admin and IT director portals
+  notificationHub.sendToPortals(['it_director', 'admin', 'super_admin'], message);
+  logger.info(`[WebSocket] Broadcast sla_breach: ${slaTitle} (impact: ${breach.impactLevel})`);
+}

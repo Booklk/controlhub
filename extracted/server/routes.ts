@@ -84,6 +84,7 @@ import { registerTicketRoutes } from "./routes/tickets.routes";
 import { registerDataWarehouseRoutes } from "./routes/dataWarehouse.routes";
 import { registerDataAnalyticsRoutes } from "./routes/dataAnalytics.routes";
 import { registerReportRoutes } from "./routes/reports.routes";
+import { registerSystemMonitorRoutes } from "./routes/systemMonitor.routes";
 
 // Security: JWT secrets MUST come from environment variables in production
 const JWT_ACCESS_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
@@ -621,6 +622,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   registerDataWarehouseRoutes(app);
   registerDataAnalyticsRoutes(app);
   registerReportRoutes(app);
+  registerSystemMonitorRoutes(app);
 
   // ==================== Smart Intelligence Endpoints ====================
 
@@ -4752,6 +4754,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       logger.error('Error fetching audit stats:', { error });
       res.status(500).json({ error: 'حدث خطأ في جلب إحصائيات التدقيق' });
+    }
+  });
+
+  // ==================== Audit Trail per Entity ====================
+  app.get("/api/audit-trail/:entityType/:entityId", authenticateToken, async (req: any, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const id = parseInt(entityId);
+      if (isNaN(id)) return res.status(400).json({ error: 'معرف غير صالح' });
+
+      const result = await db.execute(sql`
+        SELECT al.id, al.action, al.old_value, al.new_value, al.changed_fields,
+          al.details, al.created_at, u.name as user_name, u.email as user_email
+        FROM audit_logs al
+        LEFT JOIN users u ON al.user_id = u.id
+        WHERE al.entity_type = ${entityType} AND al.entity_id = ${id}
+        ORDER BY al.created_at DESC LIMIT 50
+      `);
+      res.json((result as any).rows || result);
+    } catch (error) {
+      logger.error('Error fetching audit trail:', { error });
+      res.status(500).json({ error: 'حدث خطأ' });
     }
   });
 

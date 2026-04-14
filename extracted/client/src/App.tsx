@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { lazy, Suspense, Component, ErrorInfo, ReactNode } from "react";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 const SmartAssistant = lazy(() => import("@/components/SmartAssistant").then(m => ({ default: m.SmartAssistant })));
 import { PageLoader } from "@/components/PageTransition";
 import { PORTAL_ACCESS, DEFAULT_ROUTES, hasPortalAccess, getPortalDefaultRoute, USER_ROLES, IT_DEPT_PORTALS } from "@shared/constants";
@@ -1128,6 +1129,7 @@ function AuthenticatedSmartAssistant() {
 
 function AppInner() {
   const { dir } = useI18n();
+  useKeyboardShortcuts();
   return (
     <div dir={dir} className="font-sans">
       <Suspense fallback={<PageLoader />}>

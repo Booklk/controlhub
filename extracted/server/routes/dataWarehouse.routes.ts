@@ -596,6 +596,17 @@ export function registerDataWarehouseRoutes(app: Express) {
     }
   });
 
+  // Smart Analytics
+  app.get("/api/smart/anomalies", authenticateToken, async (req: any, res) => {
+    try { const { detectAnomalies } = await import("../services/smartAnalytics"); res.json(await detectAnomalies()); } catch(e) { res.status(500).json({ error: (e as Error).message }); }
+  });
+  app.get("/api/smart/predictions", authenticateToken, async (req: any, res) => {
+    try { const { generatePredictions } = await import("../services/smartAnalytics"); res.json(await generatePredictions()); } catch(e) { res.status(500).json({ error: (e as Error).message }); }
+  });
+  app.get("/api/smart/recommendations", authenticateToken, async (req: any, res) => {
+    try { const { generateRecommendations } = await import("../services/smartAnalytics"); res.json(await generateRecommendations()); } catch(e) { res.status(500).json({ error: (e as Error).message }); }
+  });
+
   // بدء جدولة ETL
   startETLScheduler();
 
