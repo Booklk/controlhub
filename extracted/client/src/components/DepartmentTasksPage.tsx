@@ -28,7 +28,7 @@ import {
   Calendar, Edit2, CheckCheck, Archive,
   ClipboardList, Inbox, AlertTriangle, ArrowRight,
   FileDown, FileSpreadsheet, CalendarDays, Timer,
-  Target, TrendingUp, Zap, ListFilter, CheckSquare, X, Download
+  Target, TrendingUp, Zap, ListFilter, CheckSquare, X, Download, Loader2
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ExternalImportDialog } from "@/components/ExternalImportDialog";
@@ -478,10 +478,11 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
                       <Button variant="outline" onClick={() => { setIsAddDialogOpen(false); resetForm(); }} data-testid="button-cancel-task">إلغاء</Button>
                       <Button
                         onClick={() => createTaskMutation.mutate(formData)}
-                        disabled={createTaskMutation.isPending || !formData.title}
-                        className="hub-btn-gold"
+                        disabled={createTaskMutation.isPending || !formData.title.trim()}
+                        className="hub-btn-gold gap-1.5"
                         data-testid="button-create-task"
                       >
+                        {createTaskMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                         {createTaskMutation.isPending ? "جاري الإنشاء..." : "إنشاء المهمة"}
                       </Button>
                     </DialogFooter>
@@ -870,10 +871,11 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
               <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditingTask(null); resetForm(); }} data-testid="button-cancel-edit-task">إلغاء</Button>
               <Button
                 onClick={() => editingTask && updateTaskMutation.mutate({ id: editingTask.id, updates: formData })}
-                disabled={updateTaskMutation.isPending}
-                className="hub-btn-gold"
+                disabled={updateTaskMutation.isPending || !formData.title.trim()}
+                className="hub-btn-gold gap-1.5"
                 data-testid="button-update-task"
               >
+                {updateTaskMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {updateTaskMutation.isPending ? "جاري التحديث..." : "تحديث"}
               </Button>
             </DialogFooter>

@@ -385,6 +385,45 @@ export default function ITDirectorDashboard() {
           </div>
         </div>
 
+        {/* ── Anomaly Alerts Banner ── */}
+        {Array.isArray(smartAnomalies) && smartAnomalies.length > 0 && (
+          <div className="rounded-xl border border-red-500/25 bg-gradient-to-l from-red-500/10 via-red-500/5 to-transparent p-4" data-testid="anomaly-banner">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-sm font-bold text-red-400">تنبيهات ذكية - حالات شاذة</h3>
+                  <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-[10px]">
+                    {smartAnomalies.length} تنبيه
+                  </Badge>
+                </div>
+                <div className="space-y-1.5">
+                  {smartAnomalies.slice(0, 3).map((anomaly: any, idx: number) => (
+                    <div key={anomaly.id || idx} className="flex items-center gap-2 text-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                      <span className="text-white/80 truncate">{anomaly.message || anomaly.description || anomaly.title || 'حالة شاذة مكتشفة'}</span>
+                      {anomaly.severity && (
+                        <Badge variant="outline" className={`text-[9px] shrink-0 ${
+                          anomaly.severity === 'critical' ? 'bg-red-500/15 text-red-400 border-red-500/25' :
+                          anomaly.severity === 'high' ? 'bg-orange-500/15 text-orange-400 border-orange-500/25' :
+                          'bg-amber-500/15 text-amber-400 border-amber-500/25'
+                        }`}>
+                          {anomaly.severity === 'critical' ? 'حرج' : anomaly.severity === 'high' ? 'عالي' : 'متوسط'}
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                  {smartAnomalies.length > 3 && (
+                    <p className="text-[10px] text-red-400/60 mt-1">و {smartAnomalies.length - 3} تنبيهات أخرى...</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── 6 Executive KPI Cards ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {loading ? (
@@ -904,7 +943,7 @@ export default function ITDirectorDashboard() {
           </Card>
         </div>
 
-        {/* ── Department Comparison ── */}
+        {/* ── Department Comparison (Enhanced) ── */}
         <Card className="card-premium">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -916,7 +955,7 @@ export default function ITDirectorDashboard() {
           <CardContent>
             {loading ? (
               <div className="space-y-4">
-                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
               </div>
             ) : (
               <div className="space-y-4">
@@ -924,6 +963,7 @@ export default function ITDirectorDashboard() {
                   const cfg = getDeptConfig(dept);
                   const Icon = cfg.icon;
                   const taskCompletion = dept.totalTasks > 0 ? Math.round((dept.completedTasks / dept.totalTasks) * 100) : 0;
+                  const ticketResolution = dept.totalTickets > 0 ? Math.round((dept.closedTickets / dept.totalTickets) * 100) : 0;
                   const healthLabel = dept.healthScore >= 80 ? 'ممتاز' : dept.healthScore >= 60 ? 'جيد' : 'ضعيف';
                   const healthBadge = dept.healthScore >= 80
                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
@@ -934,38 +974,60 @@ export default function ITDirectorDashboard() {
                   return (
                     <div
                       key={dept.departmentId}
-                      className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-border/50 hover:border-[hsl(var(--gold))]/30 transition-all"
+                      className={`p-4 rounded-xl border border-border/50 hover:border-[hsl(var(--gold))]/30 transition-all bg-gradient-to-l ${cfg.gradient}`}
                       data-testid={`dept-compare-${dept.departmentId}`}
                     >
-                      {/* Department name + icon */}
-                      <div className="flex items-center gap-3 min-w-[180px] shrink-0">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-background/50 border border-border/50`}>
-                          <Icon className={`w-4.5 h-4.5 ${cfg.color}`} />
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-background/50 border border-border/50">
+                            <Icon className={`w-4.5 h-4.5 ${cfg.color}`} />
+                          </div>
+                          <div>
+                            <span className="text-sm font-semibold">{dept.departmentName?.replace('إدارة ', '') || 'غير محدد'}</span>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              <span className="text-[10px] text-muted-foreground">{dept.staffCount} موظف</span>
+                              <span className="text-[10px] text-muted-foreground">{dept.openTickets} تذكرة مفتوحة</span>
+                            </div>
+                          </div>
                         </div>
-                        <span className="text-sm font-semibold truncate">{dept.departmentName?.replace('إدارة ', '') || 'غير محدد'}</span>
+                        <Badge variant="outline" className={`text-xs font-bold shrink-0 ${healthBadge}`}>
+                          <Activity className="w-3 h-3 ml-1" />
+                          {dept.healthScore}% — {healthLabel}
+                        </Badge>
                       </div>
 
-                      {/* Task completion progress */}
-                      <div className="flex-1 min-w-[140px] w-full">
-                        <div className="flex justify-between text-[11px] mb-1.5">
-                          <span className="text-muted-foreground">إنجاز المهام</span>
-                          <span className="font-bold hub-stat-gold">{taskCompletion}%</span>
+                      {/* Multi-metric progress bars */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <div className="flex justify-between text-[11px] mb-1">
+                            <span className="text-muted-foreground">إنجاز المهام</span>
+                            <span className="font-bold hub-stat-gold tabular-nums">{taskCompletion}%</span>
+                          </div>
+                          <div className="h-2 bg-border/30 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-[hsl(43_74%_49%)] transition-all duration-700" style={{ width: `${taskCompletion}%` }} />
+                          </div>
+                          <p className="text-[9px] text-muted-foreground/60 mt-0.5">{dept.completedTasks}/{dept.totalTasks} مهمة</p>
                         </div>
-                        <Progress value={taskCompletion} className="h-2" />
+                        <div>
+                          <div className="flex justify-between text-[11px] mb-1">
+                            <span className="text-muted-foreground">حل التذاكر</span>
+                            <span className={`font-bold tabular-nums ${ticketResolution >= 70 ? 'text-emerald-400' : ticketResolution >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{ticketResolution}%</span>
+                          </div>
+                          <div className="h-2 bg-border/30 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-700 ${ticketResolution >= 70 ? 'bg-emerald-500' : ticketResolution >= 50 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${ticketResolution}%` }} />
+                          </div>
+                          <p className="text-[9px] text-muted-foreground/60 mt-0.5">{dept.closedTickets}/{dept.totalTickets} تذكرة</p>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-[11px] mb-1">
+                            <span className="text-muted-foreground">التزام SLA</span>
+                            <span className={`font-bold tabular-nums ${dept.slaComplianceRate >= 80 ? 'text-emerald-400' : dept.slaComplianceRate >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{dept.slaComplianceRate}%</span>
+                          </div>
+                          <div className="h-2 bg-border/30 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-700 ${dept.slaComplianceRate >= 80 ? 'bg-emerald-500' : dept.slaComplianceRate >= 60 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${dept.slaComplianceRate}%` }} />
+                          </div>
+                        </div>
                       </div>
-
-                      {/* Open tickets */}
-                      <div className="flex items-center gap-2 min-w-[100px] shrink-0">
-                        <Ticket className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="text-xs text-muted-foreground">تذاكر مفتوحة:</span>
-                        <span className="text-sm font-bold">{dept.openTickets}</span>
-                      </div>
-
-                      {/* Health badge */}
-                      <Badge variant="outline" className={`text-xs font-bold shrink-0 ${healthBadge}`}>
-                        <Activity className="w-3 h-3 ml-1" />
-                        {dept.healthScore}% — {healthLabel}
-                      </Badge>
                     </div>
                   );
                 })}

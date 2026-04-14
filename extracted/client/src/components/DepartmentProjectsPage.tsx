@@ -29,7 +29,7 @@ import {
   BarChart3, Inbox, Server, Network, HardDrive, FileCheck2, BookOpen, FileText,
   FolderKanban, Ticket, Wrench, Activity, Users, Globe, Settings,
   Plus, Search, Calendar, Clock, CheckCircle, Circle, ArrowRight, RefreshCw,
-  AlertCircle, Zap, ChevronRight, Layers, FileDown, FileSpreadsheet, Pencil, Trash2
+  AlertCircle, Zap, ChevronRight, Layers, FileDown, FileSpreadsheet, Pencil, Trash2, Loader2
 } from 'lucide-react';
 import { exportToPDF, exportToExcel} from '@/lib/exports';
 import { FormSuccessPanel } from "@/components/ui/form-guide";
@@ -179,8 +179,8 @@ export default function DepartmentProjectsPage({ config }: DepartmentProjectsPag
       setCreatedProjectName(addForm.getValues('name'));
       addForm.reset();
     },
-    onError: () => {
-      toast({ title: 'فشل في إنشاء المشروع', variant: 'destructive' });
+    onError: (error: any) => {
+      toast({ title: 'فشل في إنشاء المشروع', description: error?.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى', variant: 'destructive' });
     },
   });
 
@@ -195,8 +195,8 @@ export default function DepartmentProjectsPage({ config }: DepartmentProjectsPag
       editForm.reset();
       toast({ title: 'تم تحديث المشروع بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'فشل في تحديث المشروع', variant: 'destructive' });
+    onError: (error: any) => {
+      toast({ title: 'فشل في تحديث المشروع', description: error?.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى', variant: 'destructive' });
     },
   });
 
@@ -208,8 +208,8 @@ export default function DepartmentProjectsPage({ config }: DepartmentProjectsPag
       queryClient.invalidateQueries({ queryKey: [`/api/it-projects?departmentId=${departmentId}`] });
       toast({ title: 'تم حذف المشروع بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'فشل في حذف المشروع', variant: 'destructive' });
+    onError: (error: any) => {
+      toast({ title: 'فشل في حذف المشروع', description: error?.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى', variant: 'destructive' });
     },
   });
 
@@ -398,7 +398,19 @@ export default function DepartmentProjectsPage({ config }: DepartmentProjectsPag
             ) : filteredProjects.length === 0 ? (
               <div className="text-center py-12">
                 <FolderKanban className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">لا توجد مشاريع حالياً</p>
+                <p className="text-muted-foreground font-medium">
+                  {searchTerm || statusFilter !== 'all' ? 'لا توجد نتائج مطابقة' : 'لا توجد مشاريع حالياً'}
+                </p>
+                <p className="text-sm text-muted-foreground/60 mt-1">
+                  {searchTerm || statusFilter !== 'all'
+                    ? 'جرّب تعديل معايير البحث أو التصفية'
+                    : 'اضغط على "إضافة مشروع" لإنشاء أول مشروع في القسم'}
+                </p>
+                {(searchTerm || statusFilter !== 'all') && (
+                  <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}>
+                    إعادة ضبط التصفية
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -713,12 +725,13 @@ export default function DepartmentProjectsPage({ config }: DepartmentProjectsPag
                 >
                   إلغاء
                 </Button>
-                <Button 
-                  className="bg-gradient-to-r from-[hsl(43_74%_49%)] to-[hsl(43_74%_40%)] text-muted-foreground"
+                <Button
+                  className="bg-gradient-to-r from-[hsl(43_74%_49%)] to-[hsl(43_74%_40%)] text-muted-foreground gap-1.5"
                   disabled={createProjectMutation.isPending}
                   data-testid="button-submit-project"
                   type="submit"
                 >
+                  {createProjectMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {createProjectMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
                 </Button>
               </DialogFooter>
@@ -912,12 +925,13 @@ export default function DepartmentProjectsPage({ config }: DepartmentProjectsPag
                 >
                   إلغاء
                 </Button>
-                <Button 
-                  className="bg-gradient-to-r from-[hsl(43_74%_49%)] to-[hsl(43_74%_40%)] text-muted-foreground"
+                <Button
+                  className="bg-gradient-to-r from-[hsl(43_74%_49%)] to-[hsl(43_74%_40%)] text-muted-foreground gap-1.5"
                   disabled={updateProjectMutation.isPending}
                   data-testid="button-update-project"
                   type="submit"
                 >
+                  {updateProjectMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {updateProjectMutation.isPending ? 'جاري الحفظ...' : 'تحديث'}
                 </Button>
               </DialogFooter>
