@@ -88,6 +88,8 @@ export const itDirectorNavGroups: NavGroup[] = [
       { title: 'لوحة التحكم', href: '/it-director', icon: LayoutDashboard },
       { title: '🔴 مركز القيادة الحي', href: '/it-director/command-center', icon: Radio },
       { title: 'مؤشرات الأداء (KPI)', href: '/it-director/kpi', icon: BarChart3 },
+      { title: 'مقارنة الإدارات', href: '/it-director/department-comparison', icon: Scale },
+      { title: 'الملخص التنفيذي', href: '/it-director/executive-summary', icon: FileBarChart },
     ],
   },
   {

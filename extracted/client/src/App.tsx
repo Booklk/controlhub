@@ -101,6 +101,8 @@ const AlertRulesManagement = lazy(() => import("@/pages/AlertRulesManagement"));
 const TicketTemplatesManagement = lazy(() => import("@/pages/TicketTemplatesManagement"));
 const AutomationRulesManagement = lazy(() => import("@/pages/AutomationRulesManagement"));
 const ExternalDataSharingRequests = lazy(() => import("@/pages/ExternalDataSharingRequests"));
+const DepartmentComparisonPage = lazy(() => import("@/pages/DepartmentComparisonPage"));
+const ExecutiveSummaryPage = lazy(() => import("@/pages/ExecutiveSummaryPage"));
 
 import {
   CYBERSECURITY_DEPT_ID,
@@ -419,12 +421,20 @@ function Router() {
         />
       </Route>
       <Route path="/it-director/compliance-dashboard">
-        <ProtectedRoute 
+        <ProtectedRoute
           component={() => <ComplianceDashboard navGroups={itDirectorNavGroups} portalName="مدير تقنية المعلومات" />}
           allowedPortals={IT_DIRECTOR_PORTALS}
         />
       </Route>
-      
+
+      <Route path="/it-director/department-comparison">
+        <ProtectedRoute component={DepartmentComparisonPage} allowedPortals={IT_DIRECTOR_PORTALS} />
+      </Route>
+
+      <Route path="/it-director/executive-summary">
+        <ProtectedRoute component={ExecutiveSummaryPage} allowedPortals={IT_DIRECTOR_PORTALS} />
+      </Route>
+
       <Route path="/it-director/:rest*">
         <ProtectedRoute component={ITDirectorDashboard} allowedPortals={IT_DIRECTOR_PORTALS} />
       </Route>
