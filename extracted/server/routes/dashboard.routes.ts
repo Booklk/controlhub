@@ -935,12 +935,15 @@ export function registerDashboardRoutes(app: Express) {
             )).limit(5);
           
           matchedMinutes.forEach((m: any) => {
+            const subtitle = m.createdAt ? `محضر: ${new Date(m.createdAt).toLocaleDateString('ar-SA')}` : '';
             results.push({
               id: `meeting-${m.id}`, type: 'meeting',
-              title: m.title,
-              subtitle: m.createdAt ? `محضر: ${new Date(m.createdAt).toLocaleDateString('ar-SA')}` : '',
+              title: m.title, subtitle,
               status: m.status,
               url: '/committee/minutes',
+              score: computeScore(m.title, subtitle, 'meeting', { status: m.status, createdAt: m.createdAt }),
+              titleHighlight: highlightMatch(m.title),
+              typeIcon: typeIcons.meeting,
             });
           });
           categoryCounts.meeting = matchedMinutes.length;
@@ -950,7 +953,10 @@ export function registerDashboardRoutes(app: Express) {
       }
 
       categoryCounts.all = results.length;
-      
+
+      // Sort results by relevance score (highest first)
+      results.sort((a, b) => (b.score || 0) - (a.score || 0));
+
       const categories = Object.entries(categoryCounts)
         .filter(([id]) => id === 'all' || categoryCounts[id] > 0)
         .map(([id, count]) => ({
@@ -960,9 +966,11 @@ export function registerDashboardRoutes(app: Express) {
                  id === 'kb' ? 'المعرفة' : id === 'user' ? 'المستخدمون' :
                  id === 'referral' ? 'الإحالات' : id === 'decision' ? 'القرارات' :
                  id === 'meeting' ? 'المحاضر' : id,
+          icon: typeIcons[id]?.icon || null,
+          color: typeIcons[id]?.color || null,
         }));
-      
-      res.json({ results, categories });
+
+      res.json({ results, categories, query: q });
     } catch (error: any) {
       logger.error('Search error:', { error, message: error?.message, code: error?.code });
       res.status(500).json({ error: 'حدث خطأ في البحث' });
