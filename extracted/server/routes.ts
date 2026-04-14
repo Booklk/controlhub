@@ -2059,13 +2059,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get("/api/it-assets/:id", authenticateToken, async (req, res) => {
+  app.get("/api/it-assets/:id", authenticateToken, async (req: any, res) => {
     try {
       const id = parseId(req.params.id, res);
       if (!id) return;
       const asset = await storage.getITAssetById(id);
       if (!asset) {
         return res.status(404).json({ error: 'الأصل غير موجود' });
+      }
+      const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user?.role);
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId;
+      if (!isAdmin && asset.assignedDepartmentId && Number(asset.assignedDepartmentId) !== Number(userDeptId)) {
+        return res.status(403).json({ error: 'ليس لديك صلاحية الوصول لهذا الأصل' });
       }
       res.json(asset);
     } catch (error) {
