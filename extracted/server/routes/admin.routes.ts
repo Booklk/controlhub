@@ -358,6 +358,29 @@ export function registerAdminRoutes(app: Express) {
       if (departmentId !== undefined) updateData.departmentId = departmentId;
       if (itDepartmentId !== undefined) updateData.itDepartmentId = itDepartmentId;
       if (jobTitle !== undefined) updateData.jobTitle = jobTitle;
+
+      // نقل الموظف بين الإدارات: تحديث role و portal تلقائياً
+      const DEPT_TO_ROLE_MAP: Record<number, { staff: string; manager: string; portal: string }> = {
+        5:  { staff: 'dmo_staff', manager: 'dmo_manager', portal: 'dmo' },
+        9:  { staff: 'it_infrastructure_staff', manager: 'it_infrastructure_manager', portal: 'infrastructure' },
+        10: { staff: 'it_cybersecurity_staff', manager: 'it_cybersecurity_manager', portal: 'cybersecurity' },
+        11: { staff: 'it_digital_staff', manager: 'it_digital_manager', portal: 'digital_transformation' },
+        12: { staff: 'it_support_staff', manager: 'it_support_manager', portal: 'support' },
+      };
+      const newDeptId = Number(updateData.itDepartmentId);
+      if (newDeptId && DEPT_TO_ROLE_MAP[newDeptId] && newDeptId !== existingUser.itDepartmentId) {
+        const deptInfo = DEPT_TO_ROLE_MAP[newDeptId];
+        // تحديث البوابة تلقائياً
+        if (!updateData.portal) {
+          updateData.portal = deptInfo.portal;
+        }
+        // تحديث الدور تلقائياً (يحافظ على مستوى المدير إذا كان مدير)
+        if (!updateData.role) {
+          const isManager = existingUser.role?.includes('manager');
+          updateData.role = isManager ? deptInfo.manager : deptInfo.staff;
+        }
+        logger.info(`[UserTransfer] User ${existingUser.name} transferred: dept ${existingUser.itDepartmentId} → ${newDeptId}, role → ${updateData.role}, portal → ${updateData.portal}`);
+      }
       
       const user = await storage.updateUser(userId, updateData);
       

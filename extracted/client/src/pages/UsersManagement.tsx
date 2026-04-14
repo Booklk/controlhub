@@ -302,7 +302,7 @@ export default function UsersManagement() {
     if (!editingUser) return;
     updateUserMutation.mutate({
       id: editingUser.id,
-      data: { name: editingUser.name, role: editingUser.role, portal: editingUser.portal, phone: editingUser.phone, jobTitle: editingUser.jobTitle },
+      data: { name: editingUser.name, role: editingUser.role, portal: editingUser.portal, phone: editingUser.phone, jobTitle: editingUser.jobTitle, itDepartmentId: editingUser.itDepartmentId },
     });
   };
 
@@ -755,9 +755,38 @@ export default function UsersManagement() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">الإدارة التقنية</label>
+                    <Select value={String(editingUser.itDepartmentId || '')} onValueChange={v => {
+                      const deptId = parseInt(v);
+                      const DEPT_MAP: Record<number, { staff: string; manager: string; portal: string }> = {
+                        5: { staff: 'dmo_staff', manager: 'dmo_manager', portal: 'dmo' },
+                        9: { staff: 'it_infrastructure_staff', manager: 'it_infrastructure_manager', portal: 'infrastructure' },
+                        10: { staff: 'it_cybersecurity_staff', manager: 'it_cybersecurity_manager', portal: 'cybersecurity' },
+                        11: { staff: 'it_digital_staff', manager: 'it_digital_manager', portal: 'digital_transformation' },
+                        12: { staff: 'it_support_staff', manager: 'it_support_manager', portal: 'support' },
+                      };
+                      const info = DEPT_MAP[deptId];
+                      if (info) {
+                        const isManager = editingUser.role?.includes('manager');
+                        setEditingUser({ ...editingUser, itDepartmentId: deptId, role: isManager ? info.manager : info.staff, portal: info.portal });
+                      } else {
+                        setEditingUser({ ...editingUser, itDepartmentId: deptId });
+                      }
+                    }}>
+                      <SelectTrigger data-testid="select-edit-dept"><SelectValue placeholder="اختر الإدارة" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">مكتب إدارة البيانات</SelectItem>
+                        <SelectItem value="9">البنية التحتية</SelectItem>
+                        <SelectItem value="10">الأمن السيبراني</SelectItem>
+                        <SelectItem value="11">التحول الرقمي</SelectItem>
+                        <SelectItem value="12">الدعم الفني</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground">البوابة (تُحدَّد تلقائياً حسب الدور)</p>
-                    <p className="font-medium text-sm mt-1">{portalLabels[editingUser.portal] || editingUser.portal}</p>
+                    <p className="text-xs text-muted-foreground">البوابة والدور (تُحدَّث تلقائياً عند تغيير الإدارة)</p>
+                    <p className="font-medium text-sm mt-1">{portalLabels[editingUser.portal] || editingUser.portal} · {roleLabels[editingUser.role] || editingUser.role}</p>
                   </div>
                 </DialogBody>
                 <DialogFooter className="gap-2">
