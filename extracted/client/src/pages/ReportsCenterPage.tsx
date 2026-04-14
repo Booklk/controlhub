@@ -59,13 +59,13 @@ export default function ReportsCenterPage() {
   };
 
   return (
-    <DashboardLayout title="مركز التقارير الرسمية" portalName="dmo" navGroups={dmoNavGroups}>
+    <DashboardLayout title="مركز التقارير" portalName="dmo" navGroups={dmoNavGroups}>
       <div className="space-y-6" dir="rtl">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-[hsl(43_74%_49%)]/15"><FileText className="w-6 h-6 hub-stat-gold" /></div>
           <div>
-            <h1 className="text-xl font-bold">مركز التقارير الرسمية</h1>
-            <p className="text-sm text-muted-foreground">إصدار تقارير موثقة بأرقام مرجعية وبيانات حقيقية من PostgreSQL</p>
+            <h1 className="text-xl font-bold">مركز التقارير</h1>
+            <p className="text-sm text-muted-foreground">إصدار تقارير موثقة بأرقام مرجعية وبيانات حقيقية</p>
           </div>
         </div>
 
@@ -105,7 +105,7 @@ export default function ReportsCenterPage() {
         {/* التقرير المُصدر */}
         {generatedReport && (
           <Card className="card-premium border-[hsl(43_74%_49%)]/20">
-            {/* رأس التقرير الرسمي */}
+            {/* رأس التقرير */}
             <div className="p-6 border-b border-white/10">
               <div className="flex items-center justify-between mb-4">
                 <div>
