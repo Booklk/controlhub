@@ -144,9 +144,12 @@ export default function ITReferrals() {
   const [isDelegateOpen, setIsDelegateOpen] = useState(false);
   const [isOutlookOpen, setIsOutlookOpen] = useState(false);
 
+  const PORTAL_DEPT_MAP: Record<string, number> = { dmo: 5, infrastructure: 9, cybersecurity: 10, digital_transformation: 11, support: 12 };
+  const userDeptId = user?.itDepartmentId || PORTAL_DEPT_MAP[user?.portal || ''] || 9;
+
   const [newReferral, setNewReferral] = useState({
     type: "ticket", title: "", description: "", priority: "medium",
-    fromDepartmentId: 9, toDepartmentId: 10, reason: "", dueDate: "", slaHours: 48,
+    fromDepartmentId: userDeptId, toDepartmentId: userDeptId === 9 ? 10 : 9, reason: "", dueDate: "", slaHours: 48,
     attachments: [] as FileAttachmentData[]
   });
   const [statusUpdate, setStatusUpdate] = useState({ status: "", responseNote: "" });
@@ -171,7 +174,7 @@ export default function ITReferrals() {
     onSuccess: (data: any) => {
       invalidateRelatedQueries('/api/it-referrals');
       setCreatedRefNumber(data?.referralNumber || `REF-${data?.id || Date.now()}`);
-      setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: 9, toDepartmentId: 10, reason: "", dueDate: "", slaHours: 48, attachments: [] });
+      setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: userDeptId, toDepartmentId: userDeptId === 9 ? 10 : 9, reason: "", dueDate: "", slaHours: 48, attachments: [] });
     },
     onError: (error: Error) => toast({ title: "خطأ في إنشاء الإحالة", description: error.message, variant: "destructive" })
   });
@@ -245,7 +248,7 @@ export default function ITReferrals() {
       toast({ title: "✅ تم تحديث الإحالة بنجاح" });
       setIsCreateOpen(false);
       setEditingItem(null);
-      setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: 9, toDepartmentId: 10, reason: "", dueDate: "", slaHours: 48, attachments: [] });
+      setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: userDeptId, toDepartmentId: userDeptId === 9 ? 10 : 9, reason: "", dueDate: "", slaHours: 48, attachments: [] });
     },
     onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" })
   });
@@ -616,7 +619,7 @@ export default function ITReferrals() {
       {/* ===================== CREATE DIALOG ===================== */}
       <Dialog open={isCreateOpen} onOpenChange={(open) => {
         setIsCreateOpen(open);
-        if (!open) { setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: 9, toDepartmentId: 10, reason: "", dueDate: "", slaHours: 48, attachments: [] }); setCreatedRefNumber(null); setEditingItem(null); }
+        if (!open) { setNewReferral({ type: "ticket", title: "", description: "", priority: "medium", fromDepartmentId: userDeptId, toDepartmentId: userDeptId === 9 ? 10 : 9, reason: "", dueDate: "", slaHours: 48, attachments: [] }); setCreatedRefNumber(null); setEditingItem(null); }
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-white/98 backdrop-blur-xl border-navy/10" data-testid="dialog-create-referral">
           {createdRefNumber ? (
