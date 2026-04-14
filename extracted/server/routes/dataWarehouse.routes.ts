@@ -607,6 +607,121 @@ export function registerDataWarehouseRoutes(app: Express) {
     try { const { generateRecommendations } = await import("../services/smartAnalytics"); res.json(await generateRecommendations()); } catch(e) { res.status(500).json({ error: (e as Error).message }); }
   });
 
+  // SLA Analytics for IT Director
+  app.get("/api/director/sla-analytics", authenticateToken, async (req: any, res) => {
+    try {
+      const allowedRoles = ['system_admin', 'admin', 'it_director'];
+      if (!allowedRoles.includes(req.user?.role)) return res.status(403).json({ error: 'غير مصرح' });
+
+      const DEPTS = [
+        { id: 5, name: 'مكتب إدارة البيانات' },
+        { id: 9, name: 'البنية التحتية' },
+        { id: 10, name: 'الأمن السيبراني' },
+        { id: 11, name: 'التحول الرقمي' },
+        { id: 12, name: 'الدعم الفني' },
+      ];
+
+      const departments = await Promise.all(DEPTS.map(async (dept) => {
+        const [r] = await db.execute(sql`
+          SELECT
+            COUNT(*)::int as total_tickets,
+            COUNT(CASE WHEN sla_deadline IS NOT NULL THEN 1 END)::int as tickets_with_sla,
+            COUNT(CASE WHEN sla_deadline IS NOT NULL AND sla_deadline < NOW() AND status NOT IN ('closed','resolved') THEN 1 END)::int as breaches,
+            COUNT(CASE WHEN status IN ('resolved','closed') THEN 1 END)::int as resolved,
+            COALESCE(AVG(CASE WHEN status IN ('resolved','closed') THEN EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600 END), 0)::numeric(10,1) as avg_resolution_hours,
+            COUNT(CASE WHEN priority IN ('high','critical') AND status NOT IN ('closed','resolved') THEN 1 END)::int as high_priority_open
+          FROM it_tickets WHERE department_id = ${dept.id}
+        `);
+        const row = (r as any).rows?.[0] || (r as any)[0] || {};
+        const withSLA = Number(row.tickets_with_sla) || 1;
+        const breaches = Number(row.breaches) || 0;
+        return {
+          id: dept.id, name: dept.name,
+          totalTickets: Number(row.total_tickets) || 0,
+          ticketsWithSLA: withSLA,
+          slaBreaches: breaches,
+          slaComplianceRate: Math.round(((withSLA - breaches) / withSLA) * 100),
+          resolved: Number(row.resolved) || 0,
+          avgResolutionHours: Number(row.avg_resolution_hours) || 0,
+          highPriorityOpen: Number(row.high_priority_open) || 0,
+        };
+      }));
+
+      const totalBreaches = departments.reduce((s, d) => s + d.slaBreaches, 0);
+      const totalWithSLA = departments.reduce((s, d) => s + d.ticketsWithSLA, 0) || 1;
+      const overallCompliance = Math.round(((totalWithSLA - totalBreaches) / totalWithSLA) * 100);
+
+      res.json({ overallCompliance, totalBreaches, departments });
+    } catch (error) {
+      logger.error('[Director] SLA analytics error:', { error: (error as Error).message });
+      res.status(500).json({ error: 'حدث خطأ' });
+    }
+  });
+
+  // Manager Scorecards
+  app.get("/api/director/manager-scorecards", authenticateToken, async (req: any, res) => {
+    try {
+      const allowedRoles = ['system_admin', 'admin', 'it_director'];
+      if (!allowedRoles.includes(req.user?.role)) return res.status(403).json({ error: 'غير مصرح' });
+
+      const DEPTS = [
+        { id: 5, name: 'مكتب إدارة البيانات', role: 'dmo_manager' },
+        { id: 9, name: 'البنية التحتية', role: 'infrastructure_manager' },
+        { id: 10, name: 'الأمن السيبراني', role: 'cybersecurity_manager' },
+        { id: 11, name: 'التحول الرقمي', role: 'digital_transformation_manager' },
+        { id: 12, name: 'الدعم الفني', role: 'support_manager' },
+      ];
+
+      const scorecards = await Promise.all(DEPTS.map(async (dept) => {
+        const [r] = await db.execute(sql`
+          SELECT
+            (SELECT COUNT(*)::int FROM users WHERE it_department_id = ${dept.id} AND is_active = true AND deleted_at IS NULL) as staff_count,
+            (SELECT COUNT(*)::int FROM it_tickets WHERE department_id = ${dept.id} AND status IN ('resolved','closed')) as resolved_tickets,
+            (SELECT COUNT(*)::int FROM it_tickets WHERE department_id = ${dept.id}) as total_tickets,
+            (SELECT COUNT(*)::int FROM tasks WHERE department_id = ${dept.id} AND status = 'completed' AND deleted_at IS NULL) as completed_tasks,
+            (SELECT COUNT(*)::int FROM tasks WHERE department_id = ${dept.id} AND deleted_at IS NULL) as total_tasks,
+            (SELECT COUNT(*)::int FROM tasks WHERE department_id = ${dept.id} AND due_date < NOW() AND status NOT IN ('completed','cancelled') AND deleted_at IS NULL) as overdue_tasks,
+            (SELECT COUNT(*)::int FROM it_projects WHERE it_department_id = ${dept.id} AND status = 'completed' AND deleted_at IS NULL) as completed_projects,
+            (SELECT COUNT(*)::int FROM it_projects WHERE it_department_id = ${dept.id} AND deleted_at IS NULL) as total_projects,
+            (SELECT COUNT(*)::int FROM it_tickets WHERE department_id = ${dept.id} AND sla_deadline < NOW() AND status NOT IN ('closed','resolved')) as sla_breaches,
+            (SELECT COUNT(*)::int FROM escalations WHERE department_id = ${dept.id} AND status = 'pending') as pending_escalations
+        `);
+        const row = (r as any).rows?.[0] || (r as any)[0] || {};
+        const totalT = Number(row.total_tickets) || 1;
+        const resolvedT = Number(row.resolved_tickets) || 0;
+        const totalTasks = Number(row.total_tasks) || 1;
+        const completedTasks = Number(row.completed_tasks) || 0;
+        const totalProjects = Number(row.total_projects) || 1;
+        const completedProjects = Number(row.completed_projects) || 0;
+
+        const ticketScore = Math.round((resolvedT / totalT) * 100);
+        const taskScore = Math.round((completedTasks / totalTasks) * 100);
+        const projectScore = Math.round((completedProjects / totalProjects) * 100);
+        const overallScore = Math.round((ticketScore * 0.3) + (taskScore * 0.4) + (projectScore * 0.3));
+
+        return {
+          department: dept.name, departmentId: dept.id,
+          staffCount: Number(row.staff_count) || 0,
+          metrics: {
+            ticketResolution: ticketScore,
+            taskCompletion: taskScore,
+            projectDelivery: projectScore,
+            slaBreaches: Number(row.sla_breaches) || 0,
+            overdueItems: Number(row.overdue_tasks) || 0,
+            pendingEscalations: Number(row.pending_escalations) || 0,
+          },
+          overallScore,
+          rating: overallScore >= 85 ? 'ممتاز' : overallScore >= 70 ? 'جيد جداً' : overallScore >= 55 ? 'جيد' : 'يحتاج تحسين',
+        };
+      }));
+
+      res.json(scorecards.sort((a, b) => b.overallScore - a.overallScore));
+    } catch (error) {
+      logger.error('[Director] Manager scorecards error:', { error: (error as Error).message });
+      res.status(500).json({ error: 'حدث خطأ' });
+    }
+  });
+
   // بدء جدولة ETL
   startETLScheduler();
 
