@@ -67,6 +67,7 @@ export default function DigitalApplicationsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/digital-applications"] });
       invalidateRelatedQueries('/api/digital-applications');
       setIsDialogOpen(false);
+      resetFormData();
       toast({ title: "تم إضافة التطبيق بنجاح" });
     },
     onError: (error: Error) => {
@@ -83,6 +84,8 @@ export default function DigitalApplicationsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/digital-applications"] });
       invalidateRelatedQueries('/api/digital-applications');
       setIsDialogOpen(false);
+      setEditingItem(null);
+      resetFormData();
       toast({ title: "تم تحديث التطبيق بنجاح" });
     },
     onError: (error: Error) => {
@@ -104,6 +107,16 @@ export default function DigitalApplicationsPage() {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
+
+  const resetFormData = () => {
+    setFormData({
+      nameAr: "", nameEn: "", description: "", appType: "web",
+      platform: "web", vendor: "", version: "", url: "",
+      hostingType: "on_premise", usersCount: "", licensingType: "",
+      licenseCost: "", renewalDate: "", status: "active",
+      criticality: "medium", dataClassification: "internal", documentation: ""
+    });
+  };
 
   const handleEdit = (item: any) => {
     setEditingItem(item);
@@ -161,6 +174,10 @@ export default function DigitalApplicationsPage() {
 
 
   const handleExportPDF = () => {
+    if (!apps || apps.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToPDF({
       title: 'تقرير التطبيقات الرقمية',
       subtitle: 'JCSA - Control Hub',
@@ -172,6 +189,10 @@ export default function DigitalApplicationsPage() {
   };
 
   const handleExportExcel = () => {
+    if (!apps || apps.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToExcel({
       title: 'تقرير التطبيقات الرقمية',
       columns: [{"header":"التطبيق","key":"name","width":35},{"header":"النوع","key":"type","width":25},{"header":"الحالة","key":"status","width":20},{"header":"القسم","key":"department","width":25}],
@@ -285,7 +306,7 @@ export default function DigitalApplicationsPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) { setEditingItem(null); resetFormData(); } }}>
           <DialogContent className="sm:max-w-2xl" dir="rtl">
             <DialogHeader>
               <DialogTitle>{editingItem ? "تعديل التطبيق" : "إضافة تطبيق جديد"}</DialogTitle>

@@ -271,6 +271,42 @@ export default function AdminDashboard() {
 
         <QuickActionsHub actions={quickActions} />
 
+        {/* ── Quick Stats Row ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-gradient-to-l from-sky-500/5 to-transparent">
+            <div className="w-11 h-11 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+              <ScrollText className="w-5 h-5 text-sky-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-white/50">سجلات التدقيق اليوم</p>
+              <p className="text-2xl font-black text-white tabular-nums">{todayLogs}</p>
+            </div>
+            <div className="text-[10px] text-sky-400/70 bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">اليوم</div>
+          </div>
+          <div className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-gradient-to-l from-emerald-500/5 to-transparent">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <Activity className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-white/50">حالة النظام</p>
+              <p className="text-lg font-bold text-emerald-400 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                يعمل بشكل طبيعي
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-gradient-to-l from-amber-500/5 to-transparent">
+            <div className="w-11 h-11 rounded-xl hub-badge-gold flex items-center justify-center shrink-0">
+              <MonitorCog className="w-5 h-5 text-[hsl(222_47%_11%)]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-white/50">الجلسات النشطة</p>
+              <p className="text-2xl font-black text-white tabular-nums">{activeSessions}</p>
+            </div>
+            <button onClick={() => setLocation('/admin/sessions')} className="text-[10px] hub-stat-gold hover:underline">التفاصيل</button>
+          </div>
+        </div>
+
         {/* Attention Required Agile Widget */}
         <AttentionRequired />
 
@@ -315,20 +351,44 @@ export default function AdminDashboard() {
 
           <div className="lg:col-span-2">
             <Card className="hub-card h-full">
-              <CardHeader className="pb-3 pt-4 px-5">
+              <CardHeader className="pb-2 pt-4 px-5">
                 <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
                   <div className="hub-icon-gold hub-icon-sm">
                     <FileCheck className="w-3.5 h-3.5" />
                   </div>
-                  نسب الامتثال
+                  نسب الامتثال التنظيمي
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-5">
-                <div className="flex items-center justify-around">
-                  <ComplianceRing label="PDPL" value={governanceData?.complianceRate || 0} color="#22c55e" icon={Shield} size={90} />
-                  <ComplianceRing label="NDMO" value={governanceData?.securityScore || 0} color="#c9a227" icon={Database} size={90} />
-                  <ComplianceRing label="SLA" value={governanceData?.operationalScore || 0} color="#38bdf8" icon={Clock} size={90} />
+                <div className="flex items-center justify-around mb-4">
+                  <ComplianceRing label="PDPL" value={governanceData?.complianceRate || 0} color="#22c55e" icon={Shield} size={100} />
+                  <ComplianceRing label="NDMO" value={governanceData?.securityScore || 0} color="#c9a227" icon={Database} size={100} />
+                  <ComplianceRing label="SLA" value={governanceData?.operationalScore || 0} color="#38bdf8" icon={Clock} size={100} />
                 </div>
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/[0.06]">
+                  <div className="text-center">
+                    <p className="text-lg font-black text-emerald-400 tabular-nums">{governanceData?.complianceRate || 0}%</p>
+                    <p className="text-[10px] text-white/40">حماية البيانات</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-black hub-stat-gold tabular-nums">{governanceData?.securityScore || 0}%</p>
+                    <p className="text-[10px] text-white/40">إدارة البيانات</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-black text-sky-400 tabular-nums">{governanceData?.operationalScore || 0}%</p>
+                    <p className="text-[10px] text-white/40">اتفاقية الخدمة</p>
+                  </div>
+                </div>
+                {(() => {
+                  const avg = Math.round(((governanceData?.complianceRate || 0) + (governanceData?.securityScore || 0) + (governanceData?.operationalScore || 0)) / 3);
+                  const avgColor = avg >= 80 ? 'text-emerald-400' : avg >= 60 ? 'text-amber-400' : 'text-red-400';
+                  return (
+                    <div className="mt-3 flex items-center justify-center gap-2 py-2 rounded-lg bg-white/[0.03]">
+                      <span className="text-[11px] text-white/50">المعدل العام:</span>
+                      <span className={`text-sm font-bold ${avgColor} tabular-nums`}>{avg}%</span>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>
@@ -401,9 +461,69 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <LiveActivityFeed
-              activities={governanceData?.recentActivities?.map(a => ({ ...a, type: a.type as any })) || []}
-            />
+            <Card className="hub-card">
+              <CardHeader className="pb-2 pt-4 px-5">
+                <CardTitle className="text-sm font-bold text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-sky-500/15 flex items-center justify-center">
+                      <Activity className="w-3.5 h-3.5 text-sky-400" />
+                    </div>
+                    آخر الأنشطة
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] text-white/60 font-normal">مباشر</span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-5 pb-4">
+                {governanceData?.recentActivities && governanceData.recentActivities.length > 0 ? (
+                  <div className="relative">
+                    {/* Timeline vertical line */}
+                    <div className="absolute right-[15px] top-2 bottom-2 w-px bg-gradient-to-b from-white/10 via-white/5 to-transparent" />
+                    <div className="space-y-1">
+                      {governanceData.recentActivities.slice(0, 8).map((activity, i) => {
+                        const typeColors: Record<string, { dot: string; bg: string; text: string }> = {
+                          create: { dot: 'bg-emerald-400', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+                          update: { dot: 'bg-sky-400', bg: 'bg-sky-500/10', text: 'text-sky-400' },
+                          delete: { dot: 'bg-red-400', bg: 'bg-red-500/10', text: 'text-red-400' },
+                          login: { dot: 'bg-[hsl(var(--accent))]', bg: 'bg-[hsl(var(--accent))]/10', text: 'hub-stat-gold' },
+                          complete: { dot: 'bg-emerald-400', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+                          comment: { dot: 'bg-purple-400', bg: 'bg-purple-500/10', text: 'text-purple-400' },
+                        };
+                        const colors = typeColors[activity.type] || typeColors.update;
+                        return (
+                          <div key={activity.id || i} className="flex items-start gap-3 py-2.5 pr-0 hover:bg-white/[0.02] rounded-lg transition-colors relative">
+                            {/* Timeline dot */}
+                            <div className="relative z-10 shrink-0 w-[30px] flex justify-center pt-1">
+                              <div className={`w-3 h-3 rounded-full ${colors.dot} ring-4 ring-[hsl(222_47%_11%)]`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-semibold text-white">{activity.user}</span>
+                                <span className={`text-[10px] ${colors.text}`}>{activity.action}</span>
+                                <span className="text-xs text-white/70 truncate">{activity.target}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-white/30">{activity.time}</span>
+                                {activity.portal && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/40">{activity.portal}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Activity className="w-8 h-8 mx-auto mb-2 text-white/20" />
+                    <p className="text-sm text-white/40">لا توجد أنشطة حديثة</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
           <RiskHeatMap data={governanceData?.riskMatrix} />
         </div>
@@ -474,16 +594,35 @@ export default function AdminDashboard() {
         <Card className="hub-card">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Server className="w-5 h-5 hub-stat-gold" />
-                  حالة الأنظمة الخارجية
-                </CardTitle>
-                <CardDescription>مراقبة حالة الربط مع الأنظمة والسيرفرات الخارجية</CardDescription>
+              <div className="flex items-center gap-4">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Server className="w-5 h-5 hub-stat-gold" />
+                    حالة الأنظمة الخارجية
+                  </CardTitle>
+                  <CardDescription>مراقبة حالة الربط مع الأنظمة والسيرفرات الخارجية</CardDescription>
+                </div>
+                {/* Prominent connected/disconnected summary pill */}
+                {!loading && (
+                  <div className="flex items-center gap-2 mr-4">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-sm font-bold text-emerald-400 tabular-nums">{connectedSystems}</span>
+                      <span className="text-[10px] text-emerald-400/70">متصل</span>
+                    </div>
+                    {disconnectedSystems > 0 && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/25">
+                        <span className="w-2 h-2 rounded-full bg-red-400" />
+                        <span className="text-sm font-bold text-red-400 tabular-nums">{disconnectedSystems}</span>
+                        <span className="text-[10px] text-red-400/70">غير متصل</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <Button 
+              <Button
                 className="btn-navy"
-                size="sm" 
+                size="sm"
                 onClick={() => setLocation('/admin/systems-status')}
                 data-testid="button-view-systems-status"
               >
@@ -492,6 +631,30 @@ export default function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Overall health bar */}
+            {!loading && (externalSystems.length > 0) && (
+              <div className="mb-4 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex items-center justify-between text-[11px] mb-2">
+                  <span className="text-white/50">صحة الربط الإجمالية</span>
+                  <span className="font-bold tabular-nums" style={{ color: connectedSystems / externalSystems.length >= 0.8 ? '#34d399' : connectedSystems / externalSystems.length >= 0.5 ? '#fbbf24' : '#f87171' }}>
+                    {Math.round((connectedSystems / externalSystems.length) * 100)}%
+                  </span>
+                </div>
+                <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.round((connectedSystems / externalSystems.length) * 100)}%`,
+                      backgroundColor: connectedSystems / externalSystems.length >= 0.8 ? '#34d399' : connectedSystems / externalSystems.length >= 0.5 ? '#fbbf24' : '#f87171',
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-[10px] text-white/30">
+                  <span>{connectedSystems} من {externalSystems.length} نظام متصل</span>
+                  <span>آخر مزامنة: {lastSync}</span>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {loading ? (
                 [...Array(4)].map((_, index) => (

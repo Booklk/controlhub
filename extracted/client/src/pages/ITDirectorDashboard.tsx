@@ -223,6 +223,24 @@ export default function ITDirectorDashboard() {
     staleTime: 60000,
   });
 
+  const { data: smartRecommendations } = useQuery<any[]>({
+    queryKey: ['/api/smart/recommendations'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/smart/recommendations');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: smartAnomalies } = useQuery<any[]>({
+    queryKey: ['/api/smart/anomalies'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/smart/anomalies');
+      return res.json();
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
   const createTaskMutation = useMutation({
     mutationFn: async (data: typeof taskForm) => {
       return apiRequest('POST', '/api/tasks', {

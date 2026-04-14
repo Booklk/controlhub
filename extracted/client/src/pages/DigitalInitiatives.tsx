@@ -191,6 +191,10 @@ export default function DigitalInitiatives() {
 
 
   const handleExportPDF = () => {
+    if (!initiatives || initiatives.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToPDF({
       title: 'تقرير المبادرات الرقمية',
       subtitle: 'JCSA - Control Hub',
@@ -202,6 +206,10 @@ export default function DigitalInitiatives() {
   };
 
   const handleExportExcel = () => {
+    if (!initiatives || initiatives.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToExcel({
       title: 'تقرير المبادرات الرقمية',
       columns: [{"header":"المبادرة","key":"title","width":40},{"header":"الحالة","key":"status","width":20},{"header":"التقدم","key":"progress","width":20},{"header":"تاريخ البدء","key":"startDate","width":25}],
@@ -320,7 +328,7 @@ export default function DigitalInitiatives() {
           </CardContent>
         </Card>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) { setEditingItem(null); resetForm(); } }}>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
             <DialogHeader>
               <DialogTitle>{editingItem ? "تعديل المبادرة" : "إضافة مبادرة جديدة"}</DialogTitle>

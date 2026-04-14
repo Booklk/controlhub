@@ -148,7 +148,7 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
     queryKey: [queryKey],
   });
 
-  const { data: deptUsers = [] } = useQuery<{ id: number; name: string; email: string }[]>({
+  const { data: deptUsers = [], isLoading: usersLoading } = useQuery<{ id: number; name: string; email: string }[]>({
     queryKey: ['/api/department-users', config.departmentId],
     queryFn: async () => {
       const res = await fetch(`/api/department-users?departmentId=${config.departmentId}`, {
@@ -310,6 +310,14 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
   };
 
   const handleSubmit = () => {
+    if (!newTicket.title.trim()) {
+      toast({ title: "عنوان التذكرة مطلوب", description: "يرجى إدخال عنوان واضح للتذكرة", variant: "destructive" });
+      return;
+    }
+    if (newTicket.title.trim().length < 3) {
+      toast({ title: "العنوان قصير جداً", description: "يجب أن يكون العنوان 3 أحرف على الأقل", variant: "destructive" });
+      return;
+    }
     if (editingItem) {
       updateMutation.mutate({ id: editingItem.id, data: { ...newTicket, departmentId: config.departmentId } });
     } else {
@@ -678,24 +686,23 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
                     <Label className="text-foreground font-semibold">الوصف</Label>
                     <Textarea value={newTicket.description} onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })} placeholder="وصف تفصيلي للمشكلة..." className="mt-1 border-foreground/20 min-h-[80px]" data-testid="input-ticket-description" />
                   </div>
-                  {deptUsers.length > 0 && (
-                    <div>
-                      <Label className="text-foreground font-semibold">تعيين إلى موظف</Label>
-                      <Select value={newTicket.assigneeId ? String(newTicket.assigneeId) : "unassigned"} onValueChange={(v) => setNewTicket({ ...newTicket, assigneeId: v === "unassigned" ? null : parseInt(v) })}>
-                        <SelectTrigger className="mt-1 border-foreground/20" data-testid="select-ticket-assignee"><SelectValue placeholder="اختر موظف..." /></SelectTrigger>
-                        <SelectContent dir="rtl">
-                          <SelectItem value="unassigned">بدون تعيين</SelectItem>
-                          {deptUsers.map((u: any) => (
-                            <SelectItem key={u.id} value={String(u.id)}>{u.name || u.email}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  <div>
+                    <Label className="text-foreground font-semibold">تعيين إلى موظف</Label>
+                    <Select disabled={usersLoading} value={newTicket.assigneeId ? String(newTicket.assigneeId) : "unassigned"} onValueChange={(v) => setNewTicket({ ...newTicket, assigneeId: v === "unassigned" ? null : parseInt(v) })}>
+                      <SelectTrigger className="mt-1 border-foreground/20" data-testid="select-ticket-assignee"><SelectValue placeholder={usersLoading ? "جاري تحميل الموظفين..." : "اختر موظف..."} /></SelectTrigger>
+                      <SelectContent dir="rtl">
+                        <SelectItem value="unassigned">بدون تعيين</SelectItem>
+                        {deptUsers.map((u: any) => (
+                          <SelectItem key={u.id} value={String(u.id)}>{u.name || u.email}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} data-testid="button-cancel-ticket">إلغاء</Button>
-                  <Button onClick={handleSubmit} disabled={createTicketMutation.isPending || updateMutation.isPending || !newTicket.title} className="hub-btn-gold" data-testid="button-submit-ticket">
+                  <Button onClick={handleSubmit} disabled={createTicketMutation.isPending || updateMutation.isPending || !newTicket.title.trim()} className="hub-btn-gold gap-1.5" data-testid="button-submit-ticket">
+                    {(createTicketMutation.isPending || updateMutation.isPending) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     {editingItem ? (updateMutation.isPending ? "جاري التحديث..." : "تحديث") : (createTicketMutation.isPending ? "جاري الإنشاء..." : "إنشاء التذكرة")}
                   </Button>
                 </DialogFooter>

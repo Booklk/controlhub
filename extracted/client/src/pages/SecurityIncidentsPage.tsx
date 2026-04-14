@@ -191,6 +191,10 @@ export default function SecurityIncidentsPage() {
   };
 
   const handleExportPDF = () => {
+    if (!incidents || incidents.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToPDF({
       title: 'تقرير الحوادث الأمنية',
       subtitle: 'JCSA - Control Hub',
@@ -202,6 +206,10 @@ export default function SecurityIncidentsPage() {
   };
 
   const handleExportExcel = () => {
+    if (!incidents || incidents.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToExcel({
       title: 'تقرير الحوادث الأمنية',
       columns: [{"header":"الحادثة","key":"title","width":40},{"header":"الخطورة","key":"severity","width":20},{"header":"النوع","key":"type","width":25},{"header":"الحالة","key":"status","width":20},{"header":"التاريخ","key":"date","width":25}],

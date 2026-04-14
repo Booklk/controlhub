@@ -60,8 +60,8 @@ export default function SecurityVulnerabilitiesPage() {
       setSuccessVuln({ id: data.id, title: data.title || data.titleAr || data.cveId || 'ثغرة أمنية' });
       resetForm();
     },
-    onError: () => {
-      toast({ title: 'خطأ في إنشاء الثغرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في إنشاء الثغرة', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -75,8 +75,8 @@ export default function SecurityVulnerabilitiesPage() {
       setEditing(null);
       toast({ title: "تم تحديث الثغرة" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في تحديث الثغرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في تحديث الثغرة', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -87,8 +87,8 @@ export default function SecurityVulnerabilitiesPage() {
       invalidateRelatedQueries('/api/security-vulnerabilities');
       toast({ title: "تم حذف الثغرة" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في حذف الثغرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في حذف الثغرة', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -142,6 +142,10 @@ export default function SecurityVulnerabilitiesPage() {
 
 
   const handleExportPDF = () => {
+    if (!vulnerabilities || vulnerabilities.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToPDF({
       title: 'تقرير الثغرات الأمنية',
       subtitle: 'JCSA - Control Hub',
@@ -153,6 +157,10 @@ export default function SecurityVulnerabilitiesPage() {
   };
 
   const handleExportExcel = () => {
+    if (!vulnerabilities || vulnerabilities.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToExcel({
       title: 'تقرير الثغرات الأمنية',
       columns: [{"header":"الثغرة","key":"title","width":40},{"header":"الخطورة","key":"severity","width":20},{"header":"الحالة","key":"status","width":20},{"header":"النظام المتأثر","key":"affectedSystem","width":30}],

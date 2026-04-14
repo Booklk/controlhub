@@ -384,7 +384,7 @@ export default function InfrastructureNetwork() {
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <div className="p-4 bg-[hsl(222_47%_11%)] rounded-xl text-white text-center">
                   <Router className="w-8 h-8 mx-auto mb-2" />
-                  <span className="text-sm">Core Router</span>
+                  <span className="text-sm">الموجه الرئيسي</span>
                 </div>
               </div>
               
@@ -392,35 +392,35 @@ export default function InfrastructureNetwork() {
               <div className="absolute top-4 left-1/2 -translate-x-1/2">
                 <div className="p-3 bg-[hsl(43_74%_49%)]/20 rounded-lg text-center border border-[hsl(43_74%_49%)]/30">
                   <Globe className="w-6 h-6 mx-auto mb-1 hub-stat-gold" />
-                  <span className="text-xs">Internet</span>
+                  <span className="text-xs">الإنترنت</span>
                 </div>
               </div>
               
               <div className="absolute bottom-4 left-1/4">
                 <div className="p-3 bg-muted rounded-lg text-center">
                   <ArrowUpDown className="w-6 h-6 mx-auto mb-1" />
-                  <span className="text-xs">Switch A</span>
+                  <span className="text-xs">المحول أ</span>
                 </div>
               </div>
               
               <div className="absolute bottom-4 right-1/4">
                 <div className="p-3 bg-muted rounded-lg text-center">
                   <ArrowUpDown className="w-6 h-6 mx-auto mb-1" />
-                  <span className="text-xs">Switch B</span>
+                  <span className="text-xs">المحول ب</span>
                 </div>
               </div>
               
               <div className="absolute top-1/2 left-4 -translate-y-1/2">
                 <div className="p-3 bg-muted rounded-lg text-center">
                   <Shield className="w-6 h-6 mx-auto mb-1" />
-                  <span className="text-xs">Firewall</span>
+                  <span className="text-xs">جدار الحماية</span>
                 </div>
               </div>
               
               <div className="absolute top-1/2 right-4 -translate-y-1/2">
                 <div className="p-3 bg-muted rounded-lg text-center">
                   <Wifi className="w-6 h-6 mx-auto mb-1" />
-                  <span className="text-xs">Access Points</span>
+                  <span className="text-xs">نقاط الوصول</span>
                 </div>
               </div>
             </div>

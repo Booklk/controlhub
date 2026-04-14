@@ -193,7 +193,7 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
     queryKey: [`/api/tasks/it-department/${config.departmentId}`],
   });
 
-  const { data: departmentUsers = [] } = useQuery<{ id: number; name: string; nameEn: string; email: string; jobTitle: string; role: string }[]>({
+  const { data: departmentUsers = [], isLoading: usersLoading } = useQuery<{ id: number; name: string; nameEn: string; email: string; jobTitle: string; role: string }[]>({
     queryKey: ['/api/department-users', config.departmentId],
     queryFn: async () => {
       const res = await fetch(`/api/department-users?departmentId=${config.departmentId}`, {
@@ -444,8 +444,8 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
                       </div>
                       <div>
                         <Label className="text-foreground font-semibold">المسؤول عن التنفيذ</Label>
-                        <Select value={formData.assignedTo} onValueChange={(v) => setFormData({ ...formData, assignedTo: v })}>
-                          <SelectTrigger className="mt-1 border-foreground/20" data-testid="input-task-assignee"><SelectValue placeholder="اختر الموظف المسؤول" /></SelectTrigger>
+                        <Select disabled={usersLoading} value={formData.assignedTo} onValueChange={(v) => setFormData({ ...formData, assignedTo: v })}>
+                          <SelectTrigger className="mt-1 border-foreground/20" data-testid="input-task-assignee"><SelectValue placeholder={usersLoading ? "جاري التحميل..." : "اختر الموظف المسؤول"} /></SelectTrigger>
                           <SelectContent dir="rtl">
                             <SelectItem value="none">بدون تعيين</SelectItem>
                             {departmentUsers.map((u) => (
@@ -836,8 +836,8 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
               </div>
               <div>
                 <Label className="text-foreground font-semibold">المسؤول</Label>
-                <Select value={formData.assignedTo} onValueChange={(v) => setFormData({ ...formData, assignedTo: v })}>
-                  <SelectTrigger className="mt-1 border-foreground/20" data-testid="input-edit-assignee"><SelectValue placeholder="اختر الموظف المسؤول" /></SelectTrigger>
+                <Select disabled={usersLoading} value={formData.assignedTo} onValueChange={(v) => setFormData({ ...formData, assignedTo: v })}>
+                  <SelectTrigger className="mt-1 border-foreground/20" data-testid="input-edit-assignee"><SelectValue placeholder={usersLoading ? "جاري التحميل..." : "اختر الموظف المسؤول"} /></SelectTrigger>
                   <SelectContent dir="rtl">
                     <SelectItem value="none">بدون تعيين</SelectItem>
                     {departmentUsers.map((u) => (

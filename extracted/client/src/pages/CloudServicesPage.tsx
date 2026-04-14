@@ -71,6 +71,7 @@ export default function CloudServicesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/cloud-services"] });
       invalidateRelatedQueries('/api/cloud-services');
       setIsDialogOpen(false);
+      resetFormData();
       toast({ title: "تم إضافة الخدمة السحابية بنجاح" });
     },
     onError: (error: Error) => {
@@ -87,6 +88,8 @@ export default function CloudServicesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/cloud-services"] });
       invalidateRelatedQueries('/api/cloud-services');
       setIsDialogOpen(false);
+      setEditingItem(null);
+      resetFormData();
       toast({ title: "تم تحديث الخدمة السحابية" });
     },
     onError: (error: Error) => {
@@ -108,6 +111,17 @@ export default function CloudServicesPage() {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
   });
+
+  const resetFormData = () => {
+    setFormData({
+      nameAr: "", nameEn: "", description: "", provider: "aws",
+      serviceType: "saas", region: "", accountId: "",
+      subscriptionType: "", monthlyCost: "", annualCost: "",
+      dataClassification: "internal", complianceStatus: "compliant",
+      contractStartDate: "", contractEndDate: "", autoRenew: false,
+      status: "active", slaUptime: ""
+    });
+  };
 
   const handleEdit = (item: any) => {
     setEditingItem(item);
@@ -154,6 +168,10 @@ export default function CloudServicesPage() {
 
 
   const handleExportPDF = () => {
+    if (!services || services.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToPDF({
       title: 'تقرير الخدمات السحابية',
       subtitle: 'JCSA - Control Hub',
@@ -165,6 +183,10 @@ export default function CloudServicesPage() {
   };
 
   const handleExportExcel = () => {
+    if (!services || services.length === 0) {
+      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      return;
+    }
     exportToExcel({
       title: 'تقرير الخدمات السحابية',
       columns: [{"header":"الخدمة","key":"name","width":35},{"header":"المزود","key":"provider","width":25},{"header":"النوع","key":"type","width":25},{"header":"الحالة","key":"status","width":20}],
@@ -275,7 +297,7 @@ export default function CloudServicesPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) { setEditingItem(null); resetFormData(); } }}>
           <DialogContent className="sm:max-w-2xl" dir="rtl">
             <DialogHeader>
               <DialogTitle>{editingItem ? "تعديل الخدمة" : "إضافة خدمة سحابية"}</DialogTitle>
