@@ -61,7 +61,7 @@ export function SmartBookmarks({ portal, onNavigate }: SmartBookmarksProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/bookmarks/${id}`),
+    mutationFn: async (id: number) => { const res = await apiRequest('DELETE', `/api/bookmarks/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/bookmarks', portal] });
       toast({ title: 'تم إزالة من المفضلة' });
@@ -186,7 +186,7 @@ export function BookmarkButton({ portal, entityType, entityId, title, subtitle, 
   const isBookmarked = Array.isArray(bookmarks) && bookmarks.some((b: any) => b.entityType === entityType && b.entityId === entityId);
 
   const addMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/bookmarks', { portal, entityType, entityId, title, subtitle, priority, status, url }),
+    mutationFn: async () => { const res = await apiRequest('POST', '/api/bookmarks', { portal, entityType, entityId, title, subtitle, priority, status, url }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/bookmarks', portal] });
       toast({ title: 'تم الحفظ في المفضلة' });
@@ -194,7 +194,7 @@ export function BookmarkButton({ portal, entityType, entityId, title, subtitle, 
   });
 
   const removeMutation = useMutation({
-    mutationFn: () => apiRequest('DELETE', `/api/bookmarks/entity/${portal}/${entityType}/${entityId}`),
+    mutationFn: async () => { const res = await apiRequest('DELETE', `/api/bookmarks/entity/${portal}/${entityType}/${entityId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/bookmarks', portal] });
       toast({ title: 'تم الإزالة من المفضلة' });

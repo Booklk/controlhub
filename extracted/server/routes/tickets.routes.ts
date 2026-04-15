@@ -33,7 +33,7 @@ export function registerTicketRoutes(app: Express) {
       const isPrivilegedActivity = userRole === 'system_admin' || userRole === 'it_director';
       if (!isPrivilegedActivity) {
         const actUserDeptId = PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId;
-        if (ticket.departmentId && actUserDeptId && ticket.departmentId !== actUserDeptId) {
+        if (ticket.departmentId && actUserDeptId && Number(ticket.departmentId) !== Number(actUserDeptId)) {
           return res.status(403).json({ error: 'غير مصرح' });
         }
       }
@@ -225,7 +225,7 @@ export function registerTicketRoutes(app: Express) {
       const isPutPrivileged = putRole === 'system_admin' || putRole === 'it_director';
       if (!isPutPrivileged && existing.departmentId) {
         const putUserDeptId = PORTAL_TO_DEPT_ID[putPortal] || req.user.itDepartmentId;
-        if (!putUserDeptId || existing.departmentId !== putUserDeptId) {
+        if (!putUserDeptId || Number(existing.departmentId) !== Number(putUserDeptId)) {
           return res.status(403).json({ error: 'ليس لديك صلاحية لتعديل تذكرة من قسم آخر' });
         }
       }
@@ -279,7 +279,7 @@ export function registerTicketRoutes(app: Express) {
       const isStatusPrivileged = req.user?.role === 'system_admin' || req.user?.role === 'it_director';
       if (!isStatusPrivileged && existing.departmentId) {
         const statusUserDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId;
-        if (!statusUserDeptId || existing.departmentId !== statusUserDeptId) {
+        if (!statusUserDeptId || Number(existing.departmentId) !== Number(statusUserDeptId)) {
           return res.status(403).json({ error: 'ليس لديك صلاحية لتعديل تذكرة من قسم آخر' });
         }
       }
@@ -351,7 +351,7 @@ export function registerTicketRoutes(app: Express) {
       // ===== ISOLATION CHECK: Non-admins cannot delete tickets from other depts =====
       if (!isPrivileged) {
         const delUserDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user.itDepartmentId;
-        if (existing.departmentId && delUserDeptId && existing.departmentId !== delUserDeptId) {
+        if (existing.departmentId && delUserDeptId && Number(existing.departmentId) !== Number(delUserDeptId)) {
           return res.status(403).json({ error: 'ليس لديك صلاحية لحذف تذكرة من قسم آخر' });
         }
       }
@@ -395,7 +395,7 @@ export function registerTicketRoutes(app: Express) {
       const cmtPrivileged = cmtRole === 'system_admin' || cmtRole === 'it_director';
       if (!cmtPrivileged && ticket.departmentId) {
         const cmtDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId;
-        if (!cmtDeptId || ticket.departmentId !== cmtDeptId) {
+        if (!cmtDeptId || Number(ticket.departmentId) !== Number(cmtDeptId)) {
           return res.status(403).json({ error: 'ليس لديك صلاحية للتعليق على تذكرة من قسم آخر' });
         }
       }
@@ -580,7 +580,7 @@ export function registerTicketRoutes(app: Express) {
         try {
           const [ticket] = await db.select({ id: itTickets.id, departmentId: itTickets.departmentId }).from(itTickets).where(and(eq(itTickets.id, id), isNull(itTickets.deletedAt))).limit(1);
           if (!ticket) { failed.push({ id, reason: 'التذكرة غير موجودة' }); continue; }
-          if (!isPrivileged && userDeptId && ticket.departmentId !== userDeptId) {
+          if (!isPrivileged && userDeptId && Number(ticket.departmentId) !== Number(userDeptId)) {
             failed.push({ id, reason: 'ليس لديك صلاحية على هذه التذكرة' }); continue;
           }
           const [updated] = await db.update(itTickets).set({ status, updatedAt: new Date() }).where(eq(itTickets.id, id)).returning();
