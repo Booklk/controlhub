@@ -214,7 +214,7 @@ export default function SessionsManagement() {
                     <AlertDialogFooter className="gap-2">
                       <AlertDialogCancel>إلغاء</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() => terminateAllMutation.mutate()}
+                        onClick={() => terminateAllMutation.mutate()} disabled={terminateAllMutation.isPending}
                         className="bg-[hsl(222_47%_11%)] text-white"
                       >
                         تأكيد الإنهاء
@@ -292,7 +292,7 @@ export default function SessionsManagement() {
                           <AlertDialogFooter className="gap-2">
                             <AlertDialogCancel>إلغاء</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => terminateSessionMutation.mutate(session.id)}
+                              onClick={() => terminateSessionMutation.mutate(session.id)} disabled={terminateSessionMutation.isPending}
                               className="bg-[hsl(222_47%_11%)] text-white"
                             >
                               إنهاء الجلسة
