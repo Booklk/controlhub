@@ -358,8 +358,8 @@ export default function KnowledgeBase({ departmentId, departmentName, navGroups,
               <Button variant="outline" onClick={() => setShowCreateDialog(false)} data-testid="button-cancel-article">
                 إلغاء
               </Button>
-              <Button 
-                onClick={() => createArticleMutation.mutate(newArticle)} disabled={createArticleMutation.isPending}
+              <Button
+                onClick={() => createArticleMutation.mutate(newArticle)}
                 disabled={!newArticle.title || !newArticle.content || createArticleMutation.isPending}
                 data-testid="button-submit-article"
               >
