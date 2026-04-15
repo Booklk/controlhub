@@ -650,7 +650,7 @@ export async function sendWeeklyReports() {
           const deptTickets = allTickets.filter((t: any) => t.itDepartmentId === dId);
           const openTickets = deptTickets.filter((t: any) => !['closed', 'resolved'].includes(t.status)).length;
           const closedThisWeek = deptTickets.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && ['closed', 'resolved'].includes(t.status)).length;
-          const deptTasks = allTasks.filter((t: any) => t.departmentId === dId);
+          const deptTasks = allTasks.filter((t: any) => Number(t.departmentId) === Number(dId));
           const overdueTasks = deptTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && !['completed', 'cancelled'].includes(t.status)).length;
           return { deptName, openTickets, closedThisWeek, overdueTasks };
         });
@@ -676,7 +676,7 @@ export async function sendWeeklyReports() {
         const closedThisWeek = deptTickets.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && ['closed', 'resolved'].includes(t.status)).length;
         const slaBreaches = deptTickets.filter((t: any) => t.slaDeadline && new Date(t.slaDeadline) < now && !['closed', 'resolved'].includes(t.status)).length;
 
-        const deptTasks = allTasks.filter((t: any) => t.departmentId === deptId);
+        const deptTasks = allTasks.filter((t: any) => Number(t.departmentId) === Number(deptId));
         const overdueTasks = deptTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && !['completed', 'cancelled'].includes(t.status)).length;
         const completedTasks = deptTasks.filter((t: any) => t.updatedAt && new Date(t.updatedAt) >= weekAgo && t.status === 'completed').length;
 

@@ -2957,7 +2957,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       if (isGlobal) {
         if (requestedDeptId) {
-          res.json(allKpis.filter((k: any) => k.departmentId === requestedDeptId));
+          res.json(allKpis.filter((k: any) => Number(k.departmentId) === Number(requestedDeptId)));
         } else {
           res.json(allKpis);
         }
@@ -2965,7 +2965,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (requestedDeptId && requestedDeptId !== userDeptId) {
           return res.status(403).json({ error: 'غير مصرح لك بالوصول لمؤشرات قسم آخر' });
         }
-        res.json(allKpis.filter((k: any) => k.departmentId === userDeptId || !k.departmentId));
+        res.json(allKpis.filter((k: any) => Number(k.departmentId) === Number(userDeptId) || !k.departmentId));
       } else {
         res.json([]);
       }
@@ -3927,7 +3927,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           result = result.filter((v: any) => v.departmentId === parseInt(departmentId as string));
         }
       } else if (userDeptId) {
-        result = result.filter((v: any) => v.departmentId === userDeptId || !v.departmentId);
+        result = result.filter((v: any) => Number(v.departmentId) === Number(userDeptId) || !v.departmentId);
       }
       res.json(result);
     } catch (error) {
@@ -4054,9 +4054,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       
       let result = await db.select().from(slaAgreements).orderBy(sql`created_at DESC`);
       if (!isAdminOrDirector) {
-        result = result.filter((s: any) => s.departmentId === requestedDeptId || !s.departmentId);
+        result = result.filter((s: any) => Number(s.departmentId) === Number(requestedDeptId) || !s.departmentId);
       } else if (departmentId) {
-        result = result.filter((s: any) => s.departmentId === requestedDeptId || !s.departmentId);
+        result = result.filter((s: any) => Number(s.departmentId) === Number(requestedDeptId) || !s.departmentId);
       }
       if (vendorId) {
         result = result.filter((s: any) => s.vendorId === parseInt(vendorId as string));
@@ -4214,7 +4214,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const allSLAs = await db.select().from(slaAgreements);
       const departmentSLAIds = isAdminOrDirector_slaBr && !departmentId 
         ? allSLAs.map((s: any) => s.id)
-        : allSLAs.filter((s: any) => s.departmentId === requestedDeptId || !s.departmentId).map((s: any) => s.id);
+        : allSLAs.filter((s: any) => Number(s.departmentId) === Number(requestedDeptId) || !s.departmentId).map((s: any) => s.id);
       
       let result = await db.select().from(slaBreaches).orderBy(sql`created_at DESC`);
       result = result.filter((b: any) => departmentSLAIds.includes(b.slaId));
@@ -4270,7 +4270,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         filtered = result;
       } else if (requestedDeptId) {
         filtered = result.filter((a: any) => 
-          a.departmentId === requestedDeptId || !a.departmentId
+          Number(a.departmentId) === Number(requestedDeptId) || !a.departmentId
         );
       } else {
         filtered = result;
@@ -4414,7 +4414,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         filtered = result;
       } else {
         const deptToFilter = (isITDirector || isAdmin) ? requestedDeptId : userDeptId;
-        filtered = result.filter((d: any) => d.departmentId === deptToFilter);
+        filtered = result.filter((d: any) => Number(d.departmentId) === Number(deptToFilter));
       }
       res.json(filtered);
     } catch (error) {
@@ -13279,9 +13279,9 @@ function registerMissingWorkflowRoutes(app: Express) {
         const deptIds = [5, 9, 10, 11, 12];
         const deptSummaries = deptIds.map(did => {
           const name = DEPT_NAMES[did] || `إدارة ${did}`;
-          const dTickets = allTickets.filter((t: any) => t.departmentId === did || t.itDepartmentId === did);
-          const dTasks = allTasks.filter((t: any) => t.departmentId === did);
-          const dProjects = allProjects.filter((p: any) => p.departmentId === did);
+          const dTickets = allTickets.filter((t: any) => Number(t.departmentId) === Number(did) || Number(t.itDepartmentId) === Number(did));
+          const dTasks = allTasks.filter((t: any) => Number(t.departmentId) === Number(did));
+          const dProjects = allProjects.filter((p: any) => Number(p.departmentId) === Number(did));
           const openTickets = dTickets.filter((t: any) => t.status === 'open' || t.status === 'in_progress').length;
           const critTickets = dTickets.filter((t: any) => (t.priority === 'critical' || t.priority === 'urgent') && t.status !== 'closed').length;
           const overdueTasks = dTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed').length;
@@ -14188,9 +14188,9 @@ function registerMissingWorkflowRoutes(app: Express) {
         const deptIds2 = [5, 9, 10, 11, 12];
         const deptScores = deptIds2.map(did => {
           const name = DEPT_NAMES[did] || `قسم ${did}`;
-          const dTickets = allTickets.filter((t: any) => t.departmentId === did);
-          const dTasks = allTasks.filter((t: any) => t.departmentId === did);
-          const dProjects = allProjects.filter((p: any) => p.departmentId === did);
+          const dTickets = allTickets.filter((t: any) => Number(t.departmentId) === Number(did));
+          const dTasks = allTasks.filter((t: any) => Number(t.departmentId) === Number(did));
+          const dProjects = allProjects.filter((p: any) => Number(p.departmentId) === Number(did));
           const completedTasks = dTasks.filter((t: any) => t.status === 'completed').length;
           const totalTasks = dTasks.length;
           const taskRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;

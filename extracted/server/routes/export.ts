@@ -831,7 +831,7 @@ router.get('/weekly-report', requirePortal(['admin', 'it_director']), async (req
       c.alignment = { horizontal: 'center', vertical: 'middle' };
     });
     [1, 2, 3, 4, 5].forEach(deptId => {
-      const deptTickets = allTickets.filter((t: any) => t.departmentId === deptId);
+      const deptTickets = allTickets.filter((t: any) => Number(t.departmentId) === Number(deptId));
       const deptOpen = deptTickets.filter((t: any) => ['open', 'in_progress', 'assigned'].includes((t.status || '').toLowerCase()));
       const deptResolved = deptTickets.filter((t: any) => ['resolved', 'closed'].includes((t.status || '').toLowerCase()));
       const deptThisWeek = deptTickets.filter((t: any) => new Date(t.createdAt) >= thisWeekStart);

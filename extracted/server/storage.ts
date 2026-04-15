@@ -1253,9 +1253,9 @@ export class DatabaseStorage implements IStorage {
     departments.forEach(d => { deptCodeMap[d.id] = d.code || ''; });
 
     const departmentStats = departments.map((dept) => {
-      const deptTickets = tickets.filter(t => t.departmentId === dept.id);
+      const deptTickets = tickets.filter(t => Number(t.departmentId) === Number(dept.id));
       const deptProjects = projects.filter(p => p.itDepartmentId === dept.id);
-      const deptTasks = allTasks.filter(t => t.departmentId === dept.id);
+      const deptTasks = allTasks.filter(t => Number(t.departmentId) === Number(dept.id));
       const deptReferrals = allReferrals.filter(r => r.toDepartmentId === dept.id || r.fromDepartmentId === dept.id);
       const deptStaff = allUsers.filter(u => u.itDepartmentId === dept.id);
       const deptOpenTickets = deptTickets.filter(t => t.status === 'open' || t.status === 'in_progress' || t.status === 'assigned').length;
