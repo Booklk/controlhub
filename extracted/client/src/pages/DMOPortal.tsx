@@ -728,13 +728,13 @@ export default function DMOPortal() {
       setSystemForm({ name: '', nameAr: '', systemType: 'database', category: 'internal', ipAddress: '', port: 5432, protocol: 'https', description: '', vendor: '', version: '', environment: 'production', criticality: 'medium', dataClassification: 'internal', apiEndpoint: '', healthCheckUrl: '' });
       toast({ title: 'تم إضافة النظام بنجاح' });
     },
-    onError: () => { toast({ title: 'خطأ في إضافة النظام', variant: 'destructive' }); }
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: 'destructive' }); }
   });
 
   const deleteSystemMutation = useMutation({
     mutationFn: async (id: number) => { const res = await apiRequest('DELETE', `/api/external-systems/${id}`); return res.json(); },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/external-systems'] }); toast({ title: 'تم حذف النظام' }); },
-    onError: () => { toast({ title: 'خطأ في حذف النظام', variant: 'destructive' }); }
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: 'destructive' }); }
   });
 
   const createBreachMutation = useMutation({
@@ -748,8 +748,8 @@ export default function DMOPortal() {
       setIsBreachReportOpen(false);
       setBreachForm({ title: '', type: '', description: '', severity: 'medium', affectedRecords: '', affectedDataTypes: '' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تسجيل البلاغ', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -763,8 +763,8 @@ export default function DMOPortal() {
       toast({ title: 'تم بدء التقييم الذاتي بنجاح', description: 'يمكنك متابعة التقييم من لوحة المعلومات' });
       setIsStartAssessmentOpen(false);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في بدء التقييم', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -779,8 +779,8 @@ export default function DMOPortal() {
       setIsAddIncidentOpen(false);
       setIncidentForm({ title: '', severity: 'medium', description: '' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تسجيل البلاغ', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -795,8 +795,8 @@ export default function DMOPortal() {
       setIsAddCourseOpen(false);
       setCourseForm({ title: '', duration: '', level: 'مبتدئ', category: '' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إضافة الدورة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -811,8 +811,8 @@ export default function DMOPortal() {
       setIsAddAgreementOpen(false);
       setAgreementForm({ title: '', partyName: '', agreementType: '', startDate: '', endDate: '' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إضافة الاتفاقية', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -955,7 +955,7 @@ export default function DMOPortal() {
       setSuccessFlowMapping({ id: data.id, source: flowMappingForm.sourceSystem, target: flowMappingForm.targetSystem });
       setFlowMappingForm({ sourceSystem: '', targetSystem: '', dataCategory: '', transferMethod: '', frequency: 'daily', sensitivity: 'internal', purpose: '', legalBasis: '' });
     },
-    onError: () => { toast({ title: 'حدث خطأ في إضافة الخريطة', variant: 'destructive' }); }
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: 'destructive' }); }
   });
 
   const deleteFlowMappingMutation = useMutation({
@@ -964,7 +964,7 @@ export default function DMOPortal() {
       queryClient.invalidateQueries({ queryKey: ['/api/data-flow-mappings'] });
       toast({ title: 'تم حذف خريطة تدفق البيانات' });
     },
-    onError: () => { toast({ title: 'حدث خطأ في الحذف', variant: 'destructive' }); }
+    onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: 'destructive' }); }
   });
 
   const fetchTableColumns = async (tableName: string) => {
