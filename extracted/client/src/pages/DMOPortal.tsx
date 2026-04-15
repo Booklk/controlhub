@@ -37,8 +37,9 @@ import {
   FileSpreadsheet, PieChart, LineChart, Gauge, Timer, CheckSquare, XCircle,
   MessageSquare, Gavel, ClipboardList, GraduationCap, HelpCircle, Zap,
   ShieldAlert, FileKey, Server, Folder, ListChecks, Send, Sparkles,
-  FileDown, ArrowLeftRight
+  FileDown, ArrowLeftRight, Lightbulb
 } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 const DMO_DEPARTMENT_ID = 5;
 export { DMO_DEPARTMENT_ID };
@@ -256,6 +257,10 @@ export default function DMOPortal() {
     queryKey: ['/api/dashboard/dmo'],
     staleTime: 2 * 60 * 1000,
   });
+
+  const { data: trends } = useQuery<any>({ queryKey: ["/api/data-warehouse/trends"], staleTime: 5 * 60 * 1000 });
+  const { data: compliance } = useQuery<any>({ queryKey: ["/api/data-warehouse/compliance-analytics"], staleTime: 5 * 60 * 1000 });
+  const { data: recommendations = [] } = useQuery<any[]>({ queryKey: ["/api/smart/recommendations"], staleTime: 5 * 60 * 1000 });
 
   const { data: dsrDetailActions = [], refetch: refetchDsrActions } = useQuery<any[]>({
     queryKey: ['/api/dsr', String(selectedDsrForDetail?.id || ''), 'system-actions'],
@@ -1311,6 +1316,80 @@ export default function DMOPortal() {
           </CardContent>
         </Card>
       </div>
+
+      {/* رسم بياني + امتثال النطاقات */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* رسم بياني: اتجاه الامتثال */}
+        {trends?.tickets && (
+          <Card className="card-premium">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 hub-stat-gold" />
+                اتجاه الأداء (6 أشهر)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={trends.tickets}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#888' }} />
+                  <Tooltip contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#fff' }} />
+                  <Area type="monotone" dataKey="created" stroke="#c9a227" fill="#c9a227" fillOpacity={0.15} name="منشأة" />
+                  <Area type="monotone" dataKey="resolved" stroke="#059669" fill="#059669" fillOpacity={0.15} name="مكتملة" />
+                  <Legend />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* تقسيم الامتثال حسب النطاق */}
+        {compliance?.domainBreakdown?.length > 0 && (
+          <Card className="card-premium">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Shield className="w-4 h-4 hub-stat-gold" />
+                امتثال النطاقات
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {compliance.domainBreakdown.slice(0, 8).map((d: any) => (
+                <div key={d.id} className="flex items-center gap-3">
+                  <Badge variant="outline" className="text-xs w-14 justify-center">{d.code}</Badge>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="truncate">{d.name}</span>
+                      <span className={d.complianceRate >= 80 ? 'text-emerald-400' : d.complianceRate >= 50 ? 'text-amber-400' : 'text-red-400'}>{d.complianceRate}%</span>
+                    </div>
+                    <Progress value={d.complianceRate} className="h-1.5" />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* توصيات ذكية */}
+      {recommendations?.length > 0 && (
+        <Card className="card-premium border-[hsl(43_74%_49%)]/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 hub-stat-gold" />
+              توصيات ذكية
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {recommendations.slice(0, 4).map((rec: any, i: number) => (
+              <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-white/5">
+                <Badge className={rec.priority === 'حرجة' ? 'bg-red-500/20 text-red-400' : rec.priority === 'عالية' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'} variant="outline">{rec.priority}</Badge>
+                <p className="text-xs flex-1">{rec.message}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tasks from IT Director */}
       {stats.pendingTasks > 0 && (
