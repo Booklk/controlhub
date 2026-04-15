@@ -229,7 +229,7 @@ export default function SLAManagement({ departmentId, departmentName, navGroups,
         description: "تم إنشاء اتفاقية مستوى الخدمة",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "خطأ",
         description: "فشل في إنشاء الاتفاقية",

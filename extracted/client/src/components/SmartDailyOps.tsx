@@ -71,7 +71,7 @@ export function SmartDailyOps({
       queryClient.invalidateQueries({ queryKey: ['/api/it-referrals'] });
       toast({ title: 'تم تأكيد استلام الإحالة' });
     },
-    onError: () => toast({ title: 'تعذّر تأكيد الاستلام', variant: 'destructive' }),
+    onError: (error: Error) => toast({ description: error.message, title: 'تعذّر تأكيد الاستلام', variant: 'destructive' }),
   });
 
   const updateTaskMutation = useMutation({
@@ -81,7 +81,7 @@ export function SmartDailyOps({
       queryClient.invalidateQueries({ queryKey: ['/api/daily-ops', portal] });
       toast({ title: 'تم تحديث حالة المهمة' });
     },
-    onError: () => toast({ title: 'تعذّر تحديث الحالة', variant: 'destructive' }),
+    onError: (error: Error) => toast({ description: error.message, title: 'تعذّر تحديث الحالة', variant: 'destructive' }),
   });
 
   const minutesSinceUpdate = useMemo(() => {

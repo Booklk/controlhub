@@ -151,7 +151,7 @@ export default function SystemApprovalsManagement({ navItems, navGroups }: Syste
  toast({ title: 'تمت الموافقة على النظام وتفعيله بنجاح' });
  setSelectedSystem(null);
  },
- onError: () => {
+ onError: (error: Error) => {
  toast({ title: 'حدث خطأ في الموافقة', variant: 'destructive' });
  }
  });
@@ -169,7 +169,7 @@ export default function SystemApprovalsManagement({ navItems, navGroups }: Syste
  setSelectedSystem(null);
  setRejectReason('');
  },
- onError: () => {
+ onError: (error: Error) => {
  toast({ title: 'حدث خطأ في الرفض', variant: 'destructive' });
  }
  });
@@ -186,7 +186,7 @@ export default function SystemApprovalsManagement({ navItems, navGroups }: Syste
  form.reset();
  setShowCreateDialog(false);
  },
- onError: () => {
+ onError: (error: Error) => {
  toast({ title: 'حدث خطأ في إنشاء الطلب', variant: 'destructive' });
  }
  });

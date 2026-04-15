@@ -87,7 +87,7 @@ export function ExternalImportDialog({
         toast({ title: `✅ تم استيراد ${data.imported.length} ${targetLabel} من Outlook` });
       }
     },
-    onError: () => toast({ title: `خطأ في استيراد ${targetLabel} من Outlook`, variant: "destructive" }),
+    onError: (error: Error) => toast({ description: error.message, title: `خطأ في استيراد ${targetLabel} من Outlook`, variant: "destructive" }),
   });
 
   const oracleTestMutation = useMutation({
@@ -108,7 +108,7 @@ export function ExternalImportDialog({
         toast({ title: "فشل الاتصال", description: data.message, variant: "destructive" });
       }
     },
-    onError: () => toast({ title: "خطأ في اختبار الاتصال", variant: "destructive" }),
+    onError: (error: Error) => toast({ description: error.message, title: "خطأ في اختبار الاتصال", variant: "destructive" }),
   });
 
   const oracleImportMutation = useMutation({
@@ -137,7 +137,7 @@ export function ExternalImportDialog({
         toast({ title: `✅ تم استيراد ${data.imported.length} ${targetLabel} من Oracle` });
       }
     },
-    onError: () => toast({ title: `خطأ في استيراد ${targetLabel} من Oracle`, variant: "destructive" }),
+    onError: (error: Error) => toast({ description: error.message, title: `خطأ في استيراد ${targetLabel} من Oracle`, variant: "destructive" }),
   });
 
   const resetState = () => {

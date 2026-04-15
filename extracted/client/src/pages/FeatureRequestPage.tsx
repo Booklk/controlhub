@@ -88,7 +88,7 @@ export default function FeatureRequestPage({ navGroups, portalName, portalId }: 
       setDialogOpen(false);
       setFormData({ title: '', description: '', type: 'feature', priority: 'medium' });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({ title: 'خطأ', description: 'حدث خطأ أثناء إرسال الطلب', variant: 'destructive' });
     },
   });

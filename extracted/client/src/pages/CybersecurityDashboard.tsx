@@ -124,7 +124,7 @@ export default function CybersecurityDashboard() {
       toast({ title: 'تم تحديث حالة المهمة بنجاح' });
       setSelectedTask(null);
     },
-    onError: () => toast({ title: 'فشل تحديث حالة المهمة', variant: 'destructive' }),
+    onError: (error: Error) => toast({ description: error.message, title: 'فشل تحديث حالة المهمة', variant: 'destructive' }),
   });
 
   const pendingTasks = incomingTasks.filter((t: any) => t.status === 'pending' || t.status === 'assigned');

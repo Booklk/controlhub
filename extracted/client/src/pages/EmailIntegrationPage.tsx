@@ -62,7 +62,7 @@ export default function EmailIntegrationPage({ portal = 'it_director' }: EmailIn
       setNewKey({ name: '', defaultPriority: 'medium', defaultCategory: 'support' });
       toast({ title: 'تم إنشاء مفتاح الربط بنجاح' });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({ title: 'حدث خطأ', description: 'تعذر إنشاء مفتاح الربط', variant: 'destructive' });
     },
   });

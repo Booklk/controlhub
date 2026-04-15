@@ -164,7 +164,7 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
         description: "تم إضافة المستند بنجاح",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "خطأ",
         description: "فشل في إضافة المستند",
@@ -184,7 +184,7 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
         description: "تم حذف المستند بنجاح",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "خطأ",
         description: "فشل في حذف المستند",
@@ -231,7 +231,7 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
         description: "تم تعديل المستند بنجاح",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "خطأ",
         description: "فشل في تعديل المستند",

@@ -382,19 +382,19 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
       toast({ title: `✅ ${labels[vars.status] || "تم التحديث"}` });
       setActionDialog(null); setActionNote(""); setAssignedToId(""); invalidateAll();
     },
-    onError: () => toast({ title: "خطأ في التحديث", variant: "destructive" }),
+    onError: (error: Error) => toast({ description: error.message, title: "خطأ في التحديث", variant: "destructive" }),
   });
 
   const escalateMutation = useMutation({
     mutationFn: (id: number) => apiRequest('POST', `/api/it-referrals/${id}/escalate`, { reason: actionNote || "لا استجابة خلال مهلة SLA" }).then(r => r.json()),
     onSuccess: () => { toast({ title: "🔴 تم التصعيد", description: "أُبلغ مدير تقنية المعلومات بهذه الإحالة" }); setActionDialog(null); setActionNote(""); invalidateAll(); },
-    onError: () => toast({ title: "خطأ في التصعيد", variant: "destructive" }),
+    onError: (error: Error) => toast({ description: error.message, title: "خطأ في التصعيد", variant: "destructive" }),
   });
 
   const delegateMutation = useMutation({
     mutationFn: ({ id, toDeptId, reason }: any) => apiRequest('POST', `/api/it-referrals/${id}/delegate`, { toDepartmentId: parseInt(toDeptId), reason }).then(r => r.json()),
     onSuccess: () => { toast({ title: "✅ تم التفويض", description: "تم إحالة المهمة للإدارة المختارة" }); setActionDialog(null); setActionNote(""); setDelegateToDept(""); invalidateAll(); },
-    onError: () => toast({ title: "خطأ في التفويض", variant: "destructive" }),
+    onError: (error: Error) => toast({ description: error.message, title: "خطأ في التفويض", variant: "destructive" }),
   });
 
   const createMutation = useMutation({
@@ -430,7 +430,7 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
       if (viewingRef?.id) viewReferral({ ...viewingRef });
       toast({ title: "✅ تم حفظ المرفقات" });
     },
-    onError: () => toast({ title: "خطأ في حفظ المرفقات", variant: "destructive" }),
+    onError: (error: Error) => toast({ description: error.message, title: "خطأ في حفظ المرفقات", variant: "destructive" }),
   });
 
   // ── Action handler ─────────────────────────────────────────────────────────
