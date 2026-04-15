@@ -256,6 +256,8 @@ const PORTAL_TO_DEPT_ID: Record<string, number> = {
   digital_transformation: 11,
   support: 12,
   dmo: 5,
+  data_rep: 5,
+  data_steward: 5,
 };
 
 /**

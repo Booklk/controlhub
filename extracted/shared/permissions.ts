@@ -84,6 +84,8 @@ export const RESOURCES = {
   DATA_ASSETS: 'data_assets',
   DATA_FLOWS: 'data_flows',
   DATA_AGREEMENTS: 'data_agreements',
+  DATA_QUALITY: 'data_quality',
+  DATA_DICTIONARY: 'data_dictionary',
   DATABASE_CONNECTIONS: 'database_connections',
   DMO_REQUESTS: 'dmo_requests',
   DMO_DOCUMENTS: 'dmo_documents',
