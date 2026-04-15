@@ -13,7 +13,7 @@ import { LoadingButton } from "@/components/LoadingButton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Mail, Database, Wifi, WifiOff, Download, CheckCircle, AlertTriangle,
-  Server, Shield, Settings, RefreshCw, FileText, Inbox
+  Server, Shield, Settings, RefreshCw, FileText, Inbox, Loader2
 } from "lucide-react";
 
 interface ImportResult {
@@ -207,6 +207,19 @@ export function ExternalImportDialog({
               </TabsList>
 
               <TabsContent value="outlook" className="space-y-4 mt-4">
+                {outlookStatus.isLoading && (
+                  <div className="p-3 rounded-lg border bg-slate-50 border-slate-200 text-sm flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
+                    <p className="text-slate-600">جاري فحص اتصال Outlook...</p>
+                  </div>
+                )}
+                {outlookStatus.isError && (
+                  <div className="p-3 rounded-lg border bg-red-50 border-red-200 text-sm flex items-center gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                    <p className="text-red-700">تعذر فحص حالة Outlook — تحقق من إعدادات الخادم</p>
+                  </div>
+                )}
+                {outlookStatus.data && (
                 <div className={`p-3 rounded-lg border text-sm flex items-start gap-3 ${outlookStatus.data?.configured ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
                   {outlookStatus.data?.configured
                     ? <Wifi className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -223,6 +236,7 @@ export function ExternalImportDialog({
                     </p>
                   </div>
                 </div>
+                )}
 
                 <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 text-xs text-blue-800 space-y-1">
                   <p className="font-medium">كيف يعمل الاستيراد من Outlook؟</p>
@@ -350,7 +364,13 @@ export function ExternalImportDialog({
                   <LoadingButton
                     variant="outline"
                     className="border-orange-300 text-orange-700 hover:bg-orange-50"
-                    onClick={() => oracleTestMutation.mutate(oracleConfig)}
+                    onClick={() => {
+                      if (!oracleConfig.host || isNaN(parseInt(oracleConfig.port))) {
+                        toast({ title: "خطأ", description: "عنوان الخادم والمنفذ مطلوبان", variant: "destructive" });
+                        return;
+                      }
+                      oracleTestMutation.mutate(oracleConfig);
+                    }}
                     loading={oracleTestMutation.isPending}
                     loadingText="جاري الاختبار..."
                     disabled={!oracleConfig.host || !oracleConfig.username}

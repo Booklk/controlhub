@@ -959,7 +959,7 @@ export default function DepartmentReferrals({ departmentId, departmentName, navG
                 if (editingItem) {
                   updateMutation.mutate(body);
                 } else {
-                  createMutation.mutate(body);
+                  createMutation.mutate({ ...body, attachments: newAttachments });
                 }
               }}
               disabled={!newTitle || !newToDept || !newReason || (editingItem ? updateMutation.isPending : createMutation.isPending)}

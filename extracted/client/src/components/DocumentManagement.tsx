@@ -304,6 +304,10 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
   };
 
   const uploadDocumentFile = async (docId: number, file: File): Promise<string | null> => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "الملف كبير جداً", description: "الحد الأقصى 10 ميجابايت", variant: "destructive" });
+      return null;
+    }
     try {
       const formData = new FormData();
       formData.append('file', file);

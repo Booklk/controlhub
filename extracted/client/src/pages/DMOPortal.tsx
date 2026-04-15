@@ -6296,7 +6296,7 @@ export default function DMOPortal() {
               <Label>الوصف</Label>
               <Textarea value={breachForm.description} onChange={(e) => setBreachForm({ ...breachForm, description: e.target.value })} data-testid="input-breach-description" />
             </div>
-            <Button className="btn-gold w-full" data-testid="button-submit-breach" disabled={createBreachMutation.isPending || !breachForm.title || !breachForm.description || !breachForm.severity} onClick={() => {
+            <Button className="btn-gold w-full" data-testid="button-submit-breach" disabled={createBreachMutation.isPending || !breachForm.title || !breachForm.description || !breachForm.severity || !breachForm.type} onClick={() => {
               createBreachMutation.mutate({
                 title: breachForm.title,
                 breachType: breachForm.type,
@@ -6352,7 +6352,7 @@ export default function DMOPortal() {
                   toast({ title: 'يرجى إدخال عنوان المخاطرة', variant: 'destructive' });
                   return;
                 }
-                createRiskMutation.mutate(riskForm);
+                createRiskMutation.mutate({ title: riskForm.title, description: riskForm.description, riskLevel: riskForm.riskLevel, mitigation: riskForm.mitigation, category: riskForm.category || 'operational' });
               }}>
               {createRiskMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin ml-2" />جاري الحفظ...</> : 'إضافة الخطر'}
             </Button>
