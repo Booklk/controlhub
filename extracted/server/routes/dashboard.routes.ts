@@ -311,7 +311,7 @@ export function registerDashboardRoutes(app: Express) {
 
   app.get("/api/dashboard/infrastructure", authenticateToken, async (req: any, res) => {
     try {
-      const deptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 9;
+      const deptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || 9;
       const cacheKey = `infrastructure_stats_${deptId}`;
       const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);
@@ -374,7 +374,7 @@ export function registerDashboardRoutes(app: Express) {
 
   app.get("/api/dashboard/support", authenticateToken, async (req: any, res) => {
     try {
-      const deptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 12;
+      const deptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || 12;
       const cacheKey = `support_stats_${deptId}`;
       const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);
@@ -430,7 +430,7 @@ export function registerDashboardRoutes(app: Express) {
 
   app.get("/api/dashboard/digital-transformation", authenticateToken, async (req: any, res) => {
     try {
-      const deptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 11;
+      const deptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || 11;
       const cacheKey = `digital_stats_${deptId}`;
       const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);
@@ -484,7 +484,7 @@ export function registerDashboardRoutes(app: Express) {
   // ==================== DMO Dashboard ====================
   app.get("/api/dashboard/dmo", authenticateToken, async (req: any, res) => {
     try {
-      const deptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 5;
+      const deptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || 5;
       const cacheKey = `dmo_stats_${deptId}`;
       const cached = cache.get<any>(cacheKey);
       if (cached) return res.json(cached);

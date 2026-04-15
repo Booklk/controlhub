@@ -1280,7 +1280,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const resolvedDeptId = itDepartmentId
         ? parseInt(itDepartmentId)
-        : (req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || 9);
+        : (PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || 9);
       const autoCode = code || ('PRJ-' + Date.now().toString().slice(-8));
       const project = await storage.createITProject({
         code: autoCode,
@@ -2027,7 +2027,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           ? await storage.getITAssetsByDepartment(parseInt(departmentId as string))
           : await storage.getITAssets();
       } else {
-        const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[userPortal];
+        const userDeptId = PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId;
         const effectiveDeptId = departmentId ? parseInt(departmentId as string) : userDeptId;
         if (effectiveDeptId !== userDeptId) {
           return res.status(403).json({ error: 'لا يمكنك الاطلاع على أصول إدارة أخرى' });
@@ -2046,9 +2046,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!departmentId) return;
 
       // Department isolation check
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user.role);
-      if (!isAdmin && userDeptId && departmentId !== userDeptId) {
+      if (!isAdmin && userDeptId && Number(departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'ليس لديك صلاحية الوصول لبيانات هذه الإدارة' });
       }
 
@@ -2095,7 +2095,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(403).json({ error: 'غير مصرح لك بإنشاء الأصول التقنية' });
       }
       if (!hasGlobalAccess && hasDeptAccess) {
-        const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[userPortal];
+        const userDeptId = PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId;
         req.body.assignedDepartmentId = userDeptId;
       }
       const { name, nameAr: bodyNameAr, nameEn, description, assetType, dataClassification, assignedDepartmentId: bodyDeptId, departmentId: altDeptId, manufacturer, model, serialNumber, purchaseDate, warrantyExpiry, location, status, configurationDetails, ipAddress, criticality, value } = req.body;
@@ -2167,7 +2167,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!id) return;
       if (!hasGlobalAccess && hasDeptAccess) {
         const existing = await storage.getITAssetById(id);
-        const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[userPortal];
+        const userDeptId = PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId;
         if (existing && existing.assignedDepartmentId !== userDeptId) {
           return res.status(403).json({ error: 'لا يمكنك تعديل أصل تابع لإدارة أخرى' });
         }
@@ -3747,7 +3747,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!nameAr) return res.status(400).json({ error: 'اسم المشروع مطلوب' });
 
       // Portal isolation: enforce department from user context
-      const projUserDeptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || null;
+      const projUserDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || null;
       const isProjPrivileged = req.user?.role === 'system_admin' || req.user?.role === 'it_director';
       const projRawDeptId = body.itDepartmentId || body.departmentId;
       const projRequestedDeptId = projRawDeptId ? parseInt(projRawDeptId) : null;
@@ -3916,7 +3916,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const userRole = req.user?.role || '';
       const userPortal = req.user?.portal || '';
       const isAdminOrDirector = userRole === 'system_admin' || userRole === 'admin' || userPortal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[userPortal];
+      const userDeptId = PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId;
 
       let result = await db.select().from(vendors).where(isNull(vendors.deletedAt)).orderBy(sql`created_at DESC`);
       if (status && status !== 'all') {
@@ -3946,7 +3946,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isAdminOrDirector = userRole === 'system_admin' || userRole === 'admin' || userPortal === 'it_director';
       const safeDeptId = isAdminOrDirector
         ? (req.body.departmentId || null)
-        : (req.user.itDepartmentId || PORTAL_TO_DEPT_ID[userPortal] || null);
+        : (PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId || null);
       const [result] = await db.insert(vendors).values({
         name, nameAr: nameAr || null, vendorType, category: category || null,
         contactPerson: contactPerson || null, contactEmail: contactEmail || null,
@@ -4049,7 +4049,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const userRole = req.user?.role || '';
       const userPortal = req.user?.portal || '';
       const isAdminOrDirector = userRole === 'system_admin' || userRole === 'admin' || userPortal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[userPortal];
+      const userDeptId = PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId;
       const requestedDeptId = isAdminOrDirector && departmentId ? parseInt(departmentId as string) : userDeptId;
       
       let result = await db.select().from(slaAgreements).orderBy(sql`created_at DESC`);
@@ -4073,7 +4073,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/sla-agreements", authenticateToken, async (req: any, res) => {
     try {
       // Portal isolation: enforce department from user context
-      const slaUserDeptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || null;
+      const slaUserDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || null;
       const isSlaPrivileged = req.user?.role === 'system_admin' || req.user?.role === 'it_director';
       const slaRequestedDeptId = req.body.departmentId ? parseInt(req.body.departmentId) : null;
 
@@ -4142,9 +4142,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!existing) {
         return res.status(404).json({ error: 'الاتفاقية غير موجودة' });
       }
-      const slaUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const slaUserDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const slaIsAdminOrDir = req.user.role === 'system_admin' || req.user.role === 'it_director' || req.user.role === 'admin';
-      if (existing.departmentId && existing.departmentId !== slaUserDeptId && !slaIsAdminOrDir) {
+      if (existing.departmentId && existing.Number(departmentId) !== Number(slaUserDeptId) && !slaIsAdminOrDir) {
         return res.status(403).json({ error: 'لا يمكنك تعديل هذه الاتفاقية' });
       }
 
@@ -4179,9 +4179,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!existing) {
         return res.status(404).json({ error: 'الاتفاقية غير موجودة' });
       }
-      const slaDelUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const slaDelUserDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const slaDelIsAdminOrDir = req.user.role === 'system_admin' || req.user.portal === 'it_director';
-      if (existing.departmentId && existing.departmentId !== slaDelUserDeptId && !slaDelIsAdminOrDir) {
+      if (existing.departmentId && existing.Number(departmentId) !== Number(slaDelUserDeptId) && !slaDelIsAdminOrDir) {
         return res.status(403).json({ error: 'لا يمكنك حذف هذه الاتفاقية' });
       }
       await db.delete(slaAgreements).where(eq(slaAgreements.id, id));
@@ -4208,7 +4208,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { vendorId, slaId, departmentId } = req.query;
       const userRole_slaBr = req.user?.role || '';
       const isAdminOrDirector_slaBr = userRole_slaBr === 'system_admin' || userRole_slaBr === 'admin' || req.user.portal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const requestedDeptId = isAdminOrDirector_slaBr && departmentId ? parseInt(departmentId as string) : userDeptId;
       
       const allSLAs = await db.select().from(slaAgreements);
@@ -4260,7 +4260,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const userRole = req.user?.role || '';
       const userPortal = req.user?.portal || '';
       const isAdminOrDirector = userRole === 'system_admin' || userRole === 'admin' || userPortal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[userPortal];
+      const userDeptId = PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId;
       const requestedDeptId = departmentId ? parseInt(departmentId as string) : userDeptId;
       
       const result = await db.select().from(knowledgeBase).orderBy(sql`${knowledgeBase.createdAt} DESC`);
@@ -4289,9 +4289,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!article) {
         return res.status(404).json({ error: 'المقال غير موجود' });
       }
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const isAdminOrDirector = req.user.role === 'system_admin' || req.user.portal === 'it_director';
-      if (article.departmentId && article.departmentId !== userDeptId && !isAdminOrDirector) {
+      if (article.departmentId && article.Number(departmentId) !== Number(userDeptId) && !isAdminOrDirector) {
         return res.status(403).json({ error: 'لا يمكنك الوصول لهذا المقال' });
       }
       await db.update(knowledgeBase).set({ views: (article.views || 0) + 1 }).where(eq(knowledgeBase.id, article.id));
@@ -4303,7 +4303,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/knowledge-base", authenticateToken, requireCreate(RESOURCES.KNOWLEDGE_BASE), async (req: any, res) => {
     try {
-      const departmentId = req.body.departmentId || req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const departmentId = req.body.departmentId || PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const [result] = await db.insert(knowledgeBase).values({
         ...req.body,
         departmentId,
@@ -4337,9 +4337,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!existing) {
         return res.status(404).json({ error: 'المقال غير موجود' });
       }
-      const kbPutUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const kbPutUserDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const kbPutIsAdminOrDir = req.user.role === 'system_admin' || req.user.role === 'it_director' || req.user.role === 'admin';
-      if (!kbPutIsAdminOrDir && (!existing.departmentId || existing.departmentId !== kbPutUserDeptId)) {
+      if (!kbPutIsAdminOrDir && (!existing.departmentId || existing.Number(departmentId) !== Number(kbPutUserDeptId))) {
         return res.status(403).json({ error: 'لا يمكنك تعديل هذا المقال' });
       }
 
@@ -4382,9 +4382,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!existing) {
         return res.status(404).json({ error: 'المقال غير موجود' });
       }
-      const kbDelUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const kbDelUserDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const kbDelIsAdminOrDir = req.user.role === 'system_admin' || req.user.portal === 'it_director';
-      if (existing.departmentId && existing.departmentId !== kbDelUserDeptId && !kbDelIsAdminOrDir) {
+      if (existing.departmentId && existing.Number(departmentId) !== Number(kbDelUserDeptId) && !kbDelIsAdminOrDir) {
         return res.status(403).json({ error: 'لا يمكنك حذف هذا المقال' });
       }
       await db.delete(knowledgeBase).where(eq(knowledgeBase.id, id));
@@ -4400,7 +4400,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { departmentId } = req.query;
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
       const requestedDeptId = departmentId ? parseInt(departmentId as string) : userDeptId;
       
       if (!isITDirector && !isAdmin && departmentId && requestedDeptId !== userDeptId) {
@@ -4432,7 +4432,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
       if (!isITDirector && !isAdmin && Number(document.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك الوصول لهذا المستند' });
       }
@@ -4502,7 +4502,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
       if (!isITDirector && !isAdmin && Number(existing.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك تعديل هذا المستند' });
       }
@@ -4526,7 +4526,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
       if (!isITDirector && !isAdmin && Number(doc.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك تحميل هذا المستند' });
       }
@@ -4564,7 +4564,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
       if (!isITDirector && !isAdmin && Number(existing.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك رفع ملف لهذا المستند' });
       }
@@ -4607,7 +4607,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const isAdmin = req.user.role === 'system_admin';
       const isITDirector = req.user.portal === 'it_director';
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
       if (!isITDirector && !isAdmin && Number(existing.departmentId) !== Number(userDeptId)) {
         return res.status(403).json({ error: 'لا يمكنك حذف هذا المستند' });
       }
@@ -6703,7 +6703,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Department ownership check
       if (!isDirectorOrAdmin) {
-        const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+        const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
         if (current.fromDepartmentId !== userDeptId && current.toDepartmentId !== userDeptId) {
           return res.status(403).json({ error: 'ليس لديك صلاحية تعديل هذه الإحالة' });
         }
@@ -6815,7 +6815,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!current) {
         return res.status(404).json({ error: 'الإحالة غير موجودة' });
       }
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user.role);
       if (!isAdmin && current.fromDepartmentId !== userDeptId && current.toDepartmentId !== userDeptId) {
         return res.status(403).json({ error: 'ليس لديك صلاحية تعديل هذه الإحالة' });
@@ -6854,7 +6854,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!current) {
         return res.status(404).json({ error: 'الإحالة غير موجودة' });
       }
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
       const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user.role);
       if (!isAdmin && current.fromDepartmentId !== userDeptId && current.toDepartmentId !== userDeptId) {
         return res.status(403).json({ error: 'ليس لديك صلاحية حذف هذه الإحالة' });
@@ -11430,7 +11430,7 @@ function registerMissingWorkflowRoutes(app: Express) {
   app.get("/api/users-list", authenticateToken, async (req: any, res: any) => {
     try {
       const isAdmin = ['system_admin', 'admin', 'it_director'].includes(req.user.role);
-      const userDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user.portal];
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId;
 
       const conditions: any[] = [eq(users.isActive, true), isNull(users.deletedAt)];
 

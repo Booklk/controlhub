@@ -32,7 +32,7 @@ export function registerTicketRoutes(app: Express) {
       const userPortal = req.user?.portal || '';
       const isPrivilegedActivity = userRole === 'system_admin' || userRole === 'it_director';
       if (!isPrivilegedActivity) {
-        const actUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[userPortal];
+        const actUserDeptId = PORTAL_TO_DEPT_ID[userPortal] || req.user.itDepartmentId;
         if (ticket.departmentId && actUserDeptId && ticket.departmentId !== actUserDeptId) {
           return res.status(403).json({ error: 'غير مصرح' });
         }
@@ -162,7 +162,7 @@ export function registerTicketRoutes(app: Express) {
       const slaDeadline = getSlaDeadline(priority);
 
       // Portal isolation: enforce department from user context
-      const userDeptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal] || null;
+      const userDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId || null;
       const isPrivileged = req.user?.role === 'system_admin' || req.user?.role === 'it_director';
       const isEmployee = req.user?.portal === 'employee' || req.user?.role === 'employee';
       const requestedDeptId = req.body.departmentId ? parseInt(req.body.departmentId) : null;
@@ -224,7 +224,7 @@ export function registerTicketRoutes(app: Express) {
       const putPortal = req.user?.portal || '';
       const isPutPrivileged = putRole === 'system_admin' || putRole === 'it_director';
       if (!isPutPrivileged && existing.departmentId) {
-        const putUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[putPortal];
+        const putUserDeptId = PORTAL_TO_DEPT_ID[putPortal] || req.user.itDepartmentId;
         if (!putUserDeptId || existing.departmentId !== putUserDeptId) {
           return res.status(403).json({ error: 'ليس لديك صلاحية لتعديل تذكرة من قسم آخر' });
         }
@@ -278,7 +278,7 @@ export function registerTicketRoutes(app: Express) {
         'cybersecurity_manager', 'digital_manager', 'support_manager', 'dmo_manager'].includes(req.user?.role);
       const isStatusPrivileged = req.user?.role === 'system_admin' || req.user?.role === 'it_director';
       if (!isStatusPrivileged && existing.departmentId) {
-        const statusUserDeptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal];
+        const statusUserDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId;
         if (!statusUserDeptId || existing.departmentId !== statusUserDeptId) {
           return res.status(403).json({ error: 'ليس لديك صلاحية لتعديل تذكرة من قسم آخر' });
         }
@@ -350,7 +350,7 @@ export function registerTicketRoutes(app: Express) {
 
       // ===== ISOLATION CHECK: Non-admins cannot delete tickets from other depts =====
       if (!isPrivileged) {
-        const delUserDeptId = req.user.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal];
+        const delUserDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user.itDepartmentId;
         if (existing.departmentId && delUserDeptId && existing.departmentId !== delUserDeptId) {
           return res.status(403).json({ error: 'ليس لديك صلاحية لحذف تذكرة من قسم آخر' });
         }
@@ -394,7 +394,7 @@ export function registerTicketRoutes(app: Express) {
       const cmtRole = req.user?.role || '';
       const cmtPrivileged = cmtRole === 'system_admin' || cmtRole === 'it_director';
       if (!cmtPrivileged && ticket.departmentId) {
-        const cmtDeptId = req.user?.itDepartmentId || PORTAL_TO_DEPT_ID[req.user?.portal];
+        const cmtDeptId = PORTAL_TO_DEPT_ID[req.user?.portal] || req.user?.itDepartmentId;
         if (!cmtDeptId || ticket.departmentId !== cmtDeptId) {
           return res.status(403).json({ error: 'ليس لديك صلاحية للتعليق على تذكرة من قسم آخر' });
         }
