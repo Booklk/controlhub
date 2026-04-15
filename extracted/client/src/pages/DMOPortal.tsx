@@ -1712,9 +1712,15 @@ export default function DMOPortal() {
               <Select value={requirementForm.domainId} onValueChange={v => setRequirementForm(f => ({ ...f, domainId: v }))}>
                 <SelectTrigger data-testid="select-req-domain"><SelectValue placeholder="اختر النطاق" /></SelectTrigger>
                 <SelectContent>
-                  {domains.map((d: any) => (
-                    <SelectItem key={d.id} value={String(d.id)}>{d.nameAr || d.code}</SelectItem>
-                  ))}
+                  {domains.length === 0 ? (
+                    <div className="p-3 text-center text-sm text-muted-foreground">
+                      لا توجد نطاقات — ستُنشأ تلقائياً عند فتح الصفحة
+                    </div>
+                  ) : (
+                    domains.map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.nameAr || d.code}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               {domains.length === 0 && <p className="text-xs text-yellow-500 mt-1">أضف نطاقات أولاً من قسم الامتثال</p>}
@@ -2023,9 +2029,15 @@ export default function DMOPortal() {
               <Select value={requirementForm.domainId} onValueChange={v => setRequirementForm(f => ({ ...f, domainId: v }))}>
                 <SelectTrigger data-testid="select-req-domain-ev"><SelectValue placeholder="اختر النطاق" /></SelectTrigger>
                 <SelectContent>
-                  {domains.map((d: any) => (
-                    <SelectItem key={d.id} value={String(d.id)}>{d.nameAr || d.code}</SelectItem>
-                  ))}
+                  {domains.length === 0 ? (
+                    <div className="p-3 text-center text-sm text-muted-foreground">
+                      لا توجد نطاقات — ستُنشأ تلقائياً عند فتح الصفحة
+                    </div>
+                  ) : (
+                    domains.map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.nameAr || d.code}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -2633,11 +2645,17 @@ export default function DMOPortal() {
                       <SelectValue placeholder="اختر أصل بياني" />
                     </SelectTrigger>
                     <SelectContent>
-                      {dataAssetsList.map((asset: any) => (
-                        <SelectItem key={asset.id} value={String(asset.id)}>
-                          {asset.name} {asset.system ? `(${asset.system})` : ''}
-                        </SelectItem>
-                      ))}
+                      {dataAssetsList.length === 0 ? (
+                        <div className="p-3 text-center text-sm text-muted-foreground">
+                          لا توجد أصول بيانية — أضف من فهرس البيانات
+                        </div>
+                      ) : (
+                        dataAssetsList.map((asset: any) => (
+                          <SelectItem key={asset.id} value={String(asset.id)}>
+                            {asset.name} {asset.system ? `(${asset.system})` : ''}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -2869,14 +2887,20 @@ export default function DMOPortal() {
                           Control Hub (قاعدة البيانات الداخلية)
                         </div>
                       </SelectItem>
-                      {(databaseConnectionsList as any[]).filter((c: any) => c.isActive && c.approvalStatus === 'approved').map((conn: any) => (
-                        <SelectItem key={conn.id} value={String(conn.id)}>
-                          <div className="flex items-center gap-2">
-                            <Database className="w-3.5 h-3.5 text-amber-500" />
-                            {conn.connectionNameAr || conn.connectionName} ({conn.databaseType} — {conn.databaseName})
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {(databaseConnectionsList as any[]).filter((c: any) => c.isActive && c.approvalStatus === 'approved').length === 0 && (databaseConnectionsList as any[]).length === 0 ? (
+                        <div className="p-3 text-center text-sm text-muted-foreground">
+                          لا توجد اتصالات خارجية — أضف من فهرس البيانات
+                        </div>
+                      ) : (
+                        (databaseConnectionsList as any[]).filter((c: any) => c.isActive && c.approvalStatus === 'approved').map((conn: any) => (
+                          <SelectItem key={conn.id} value={String(conn.id)}>
+                            <div className="flex items-center gap-2">
+                              <Database className="w-3.5 h-3.5 text-amber-500" />
+                              {conn.connectionNameAr || conn.connectionName} ({conn.databaseType} — {conn.databaseName})
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                       {(databaseConnectionsList as any[]).filter((c: any) => c.isActive && c.approvalStatus !== 'approved').length > 0 && (
                         <SelectItem value="-1" disabled>
                           — اتصالات بانتظار الموافقة —
@@ -2916,7 +2940,13 @@ export default function DMOPortal() {
                         <Select value={qualityForm.targetTable} onValueChange={v => { setQualityForm({...qualityForm, targetTable: v, targetColumn: ''}); fetchTableColumns(v); }}>
                           <SelectTrigger data-testid="select-quality-table"><SelectValue placeholder="اختر الجدول" /></SelectTrigger>
                           <SelectContent>
-                            {systemTables.map((t: any) => <SelectItem key={t.table_name} value={t.table_name}>{t.table_name} ({t.row_count} سجل)</SelectItem>)}
+                            {systemTables.length === 0 ? (
+                              <div className="p-3 text-center text-sm text-muted-foreground">
+                                لا توجد جداول — تحقق من اتصال قاعدة البيانات
+                              </div>
+                            ) : (
+                              systemTables.map((t: any) => <SelectItem key={t.table_name} value={t.table_name}>{t.table_name} ({t.row_count} سجل)</SelectItem>)
+                            )}
                           </SelectContent>
                         </Select>
                         {systemTables.length > 0 && <p className="text-xs text-muted-foreground">{systemTables.length} جدول متاح</p>}
@@ -2967,9 +2997,15 @@ export default function DMOPortal() {
                       <SelectTrigger data-testid="select-quality-system"><SelectValue placeholder="اختر النظام" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="control_hub">Control Hub (النظام الداخلي)</SelectItem>
-                        {externalSystemsList.filter((s: any) => s.isActive).map((sys: any) => (
-                          <SelectItem key={sys.id} value={sys.nameAr || sys.name}>{sys.nameAr || sys.name}</SelectItem>
-                        ))}
+                        {externalSystemsList.filter((s: any) => s.isActive).length === 0 && externalSystemsList.length === 0 ? (
+                          <div className="p-3 text-center text-sm text-muted-foreground">
+                            لا توجد أنظمة خارجية — أضف من تبويب الأنظمة الخارجية
+                          </div>
+                        ) : (
+                          externalSystemsList.filter((s: any) => s.isActive).map((sys: any) => (
+                            <SelectItem key={sys.id} value={sys.nameAr || sys.name}>{sys.nameAr || sys.name}</SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -3306,9 +3342,15 @@ export default function DMOPortal() {
                   <Select value={selectedProfileTable} onValueChange={v => loadProfile(v)}>
                     <SelectTrigger data-testid="select-profile-table"><SelectValue placeholder="اختر جدول..." /></SelectTrigger>
                     <SelectContent>
-                      {systemTables.map((t: any) => (
-                        <SelectItem key={t.table_name} value={t.table_name}>{t.table_name} ({t.row_count} سجل)</SelectItem>
-                      ))}
+                      {systemTables.length === 0 ? (
+                        <div className="p-3 text-center text-sm text-muted-foreground">
+                          لا توجد جداول — تحقق من اتصال قاعدة البيانات
+                        </div>
+                      ) : (
+                        systemTables.map((t: any) => (
+                          <SelectItem key={t.table_name} value={t.table_name}>{t.table_name} ({t.row_count} سجل)</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {loadingProfile && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> جاري التحليل...</div>}
@@ -3971,9 +4013,15 @@ export default function DMOPortal() {
                     <SelectValue placeholder="اختر الإدارة" />
                   </SelectTrigger>
                   <SelectContent>
-                    {businessDepartments.filter((d: any) => d.isActive).map((dept: any) => (
-                      <SelectItem key={dept.id} value={dept.nameAr}>{dept.nameAr}</SelectItem>
-                    ))}
+                    {businessDepartments.filter((d: any) => d.isActive).length === 0 ? (
+                      <div className="p-3 text-center text-sm text-muted-foreground">
+                        لا توجد إدارات — أضف من إعدادات النظام
+                      </div>
+                    ) : (
+                      businessDepartments.filter((d: any) => d.isActive).map((dept: any) => (
+                        <SelectItem key={dept.id} value={dept.nameAr}>{dept.nameAr}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

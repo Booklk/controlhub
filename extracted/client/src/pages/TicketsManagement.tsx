@@ -613,33 +613,37 @@ export default function TicketsManagement() {
                                 )}
                               />
                             </div>
-                            {deptUsers.length > 0 && (
-                              <FormField
-                                control={form.control}
-                                name="assigneeId"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>تعيين إلى موظف</FormLabel>
-                                    <Select
-                                      value={field.value ? String(field.value) : "unassigned"}
-                                      onValueChange={(v) => field.onChange(v === "unassigned" ? null : parseInt(v))}
-                                    >
-                                      <FormControl>
-                                        <SelectTrigger data-testid="select-ticket-assignee">
-                                          <SelectValue placeholder="اختر موظف..." />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value="unassigned">بدون تعيين</SelectItem>
-                                        {deptUsers.map((u: any) => (
+                            <FormField
+                              control={form.control}
+                              name="assigneeId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>تعيين إلى موظف</FormLabel>
+                                  <Select
+                                    value={field.value ? String(field.value) : "unassigned"}
+                                    onValueChange={(v) => field.onChange(v === "unassigned" ? null : parseInt(v))}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-ticket-assignee">
+                                        <SelectValue placeholder="اختر موظف..." />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="unassigned">بدون تعيين</SelectItem>
+                                      {deptUsers.length === 0 ? (
+                                        <div className="p-3 text-center text-sm text-muted-foreground">
+                                          لا يوجد موظفين — أضف موظفين من إدارة الفرق
+                                        </div>
+                                      ) : (
+                                        deptUsers.map((u: any) => (
                                           <SelectItem key={u.id} value={String(u.id)}>{u.name || u.email}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormItem>
-                                )}
-                              />
-                            )}
+                                        ))
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
                             <DialogFooter className="gap-2 pt-4">
                               <Button 
                                 variant="outline" 

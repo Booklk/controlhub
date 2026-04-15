@@ -684,9 +684,15 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
                       <Select value={newTicket.category} onValueChange={(v) => setNewTicket({ ...newTicket, category: v })}>
                         <SelectTrigger className="mt-1 border-foreground/20" data-testid="select-ticket-category"><SelectValue /></SelectTrigger>
                         <SelectContent dir="rtl">
-                          {config.categories.map(c => (
-                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                          ))}
+                          {config.categories.length === 0 ? (
+                            <div className="p-3 text-center text-sm text-muted-foreground">
+                              لا توجد تصنيفات — أضف من الإدارة المختصة
+                            </div>
+                          ) : (
+                            config.categories.map(c => (
+                              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -701,9 +707,15 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
                       <SelectTrigger className="mt-1 border-foreground/20" data-testid="select-ticket-assignee"><SelectValue placeholder={usersLoading ? "جاري تحميل الموظفين..." : "اختر موظف..."} /></SelectTrigger>
                       <SelectContent dir="rtl">
                         <SelectItem value="unassigned">بدون تعيين</SelectItem>
-                        {deptUsers.map((u: any) => (
-                          <SelectItem key={u.id} value={String(u.id)}>{u.name || u.email}</SelectItem>
-                        ))}
+                        {deptUsers.length === 0 && !usersLoading ? (
+                          <div className="p-3 text-center text-sm text-muted-foreground">
+                            لا يوجد موظفين — أضف موظفين من إدارة الفرق
+                          </div>
+                        ) : (
+                          deptUsers.map((u: any) => (
+                            <SelectItem key={u.id} value={String(u.id)}>{u.name || u.email}</SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

@@ -694,11 +694,17 @@ export default function ITDirectorTasks() {
                       <SelectValue placeholder={!form.departmentId ? 'اختر إدارة أولاً' : deptUsers.length === 0 ? 'لا يوجد موظفون' : 'اختر موظفاً'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {deptUsers.map(u => (
-                        <SelectItem key={u.id} value={String(u.id)}>
-                          {u.name} {u.jobTitle ? `— ${u.jobTitle}` : ''}
-                        </SelectItem>
-                      ))}
+                      {deptUsers.length === 0 ? (
+                        <div className="p-3 text-center text-sm text-muted-foreground">
+                          لا يوجد موظفين — أضف موظفين من إدارة الفرق
+                        </div>
+                      ) : (
+                        deptUsers.map(u => (
+                          <SelectItem key={u.id} value={String(u.id)}>
+                            {u.name} {u.jobTitle ? `— ${u.jobTitle}` : ''}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

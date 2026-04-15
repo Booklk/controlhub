@@ -454,9 +454,15 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
                           <SelectTrigger className="mt-1 border-foreground/20" data-testid="input-task-assignee"><SelectValue placeholder={usersLoading ? "جاري التحميل..." : "اختر الموظف المسؤول"} /></SelectTrigger>
                           <SelectContent dir="rtl">
                             <SelectItem value="none">بدون تعيين</SelectItem>
-                            {departmentUsers.map((u) => (
-                              <SelectItem key={u.id} value={String(u.id)}>{u.name}{u.jobTitle ? ` - ${u.jobTitle}` : ''}</SelectItem>
-                            ))}
+                            {departmentUsers.length === 0 && !usersLoading ? (
+                              <div className="p-3 text-center text-sm text-muted-foreground">
+                                لا يوجد موظفين — أضف موظفين من إدارة الفرق
+                              </div>
+                            ) : (
+                              departmentUsers.map((u) => (
+                                <SelectItem key={u.id} value={String(u.id)}>{u.name}{u.jobTitle ? ` - ${u.jobTitle}` : ''}</SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -847,9 +853,15 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
                   <SelectTrigger className="mt-1 border-foreground/20" data-testid="input-edit-assignee"><SelectValue placeholder={usersLoading ? "جاري التحميل..." : "اختر الموظف المسؤول"} /></SelectTrigger>
                   <SelectContent dir="rtl">
                     <SelectItem value="none">بدون تعيين</SelectItem>
-                    {departmentUsers.map((u) => (
-                      <SelectItem key={u.id} value={String(u.id)}>{u.name}{u.jobTitle ? ` - ${u.jobTitle}` : ''}</SelectItem>
-                    ))}
+                    {departmentUsers.length === 0 && !usersLoading ? (
+                      <div className="p-3 text-center text-sm text-muted-foreground">
+                        لا يوجد موظفين — أضف موظفين من إدارة الفرق
+                      </div>
+                    ) : (
+                      departmentUsers.map((u) => (
+                        <SelectItem key={u.id} value={String(u.id)}>{u.name}{u.jobTitle ? ` - ${u.jobTitle}` : ''}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
