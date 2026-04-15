@@ -1701,7 +1701,7 @@ export default function DMOPortal() {
         </CardContent>
       </Card>
 
-      <Dialog open={isAddRequirementOpen} onOpenChange={setIsAddRequirementOpen}>
+      <Dialog open={isAddRequirementOpen} onOpenChange={(open) => { setIsAddRequirementOpen(open); if (!open) setRequirementForm({ domainId: '', code: '', titleAr: '', titleEn: '', description: '', priority: 'medium', complianceLevel: 'mandatory', evidenceType: 'document' }); }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>إضافة متطلب امتثال جديد</DialogTitle>
@@ -2012,7 +2012,7 @@ export default function DMOPortal() {
         </CardContent>
       </Card>
 
-      <Dialog open={isAddEvidenceRequirementOpen} onOpenChange={setIsAddEvidenceRequirementOpen}>
+      <Dialog open={isAddEvidenceRequirementOpen} onOpenChange={(open) => { setIsAddEvidenceRequirementOpen(open); if (!open) setRequirementForm({ domainId: '', code: '', titleAr: '', titleEn: '', description: '', priority: 'medium', complianceLevel: 'mandatory', evidenceType: 'document' }); }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>إضافة متطلب امتثال جديد</DialogTitle>
@@ -4327,7 +4327,7 @@ export default function DMOPortal() {
         </Card>
 
         {/* ====== Dispatch Dialog ====== */}
-        <Dialog open={isDsrDispatchOpen} onOpenChange={setIsDsrDispatchOpen}>
+        <Dialog open={isDsrDispatchOpen} onOpenChange={(open) => { setIsDsrDispatchOpen(open); if (!open) { setDsrDispatchSystems([]); setDsrDispatchActionType(''); setSelectedDsrForDispatch(null); } }}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -4569,7 +4569,7 @@ export default function DMOPortal() {
         </Dialog>
 
         {/* DSR Create Dialog */}
-        <Dialog open={isDsrCreateOpen} onOpenChange={setIsDsrCreateOpen}>
+        <Dialog open={isDsrCreateOpen} onOpenChange={(open) => { setIsDsrCreateOpen(open); if (!open) setDsrForm({ requestType: 'access', subjectName: '', subjectEmail: '', subjectPhone: '', subjectIdNumber: '', description: '', priority: 'normal' }); }}>
           <DialogContent className="max-w-lg" dir="rtl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -6080,7 +6080,7 @@ export default function DMOPortal() {
       </Dialog>
 
       {/* Add Incident Dialog */}
-      <Dialog open={isAddIncidentOpen} onOpenChange={setIsAddIncidentOpen}>
+      <Dialog open={isAddIncidentOpen} onOpenChange={(open) => { setIsAddIncidentOpen(open); if (!open) setIncidentForm({ title: '', severity: 'medium', description: '' }); }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>بلاغ أمني جديد</DialogTitle>
@@ -6123,7 +6123,7 @@ export default function DMOPortal() {
       </Dialog>
 
       {/* Breach Report Dialog */}
-      <Dialog open={isBreachReportOpen} onOpenChange={setIsBreachReportOpen}>
+      <Dialog open={isBreachReportOpen} onOpenChange={(open) => { setIsBreachReportOpen(open); if (!open) setBreachForm({ title: '', type: '', description: '', severity: 'medium', affectedRecords: '', affectedDataTypes: '' }); }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>بلاغ اختراق جديد</DialogTitle>
@@ -6186,7 +6186,7 @@ export default function DMOPortal() {
       </Dialog>
 
       {/* Add Risk Dialog */}
-      <Dialog open={isAddRiskOpen} onOpenChange={setIsAddRiskOpen}>
+      <Dialog open={isAddRiskOpen} onOpenChange={(open) => { setIsAddRiskOpen(open); if (!open) setRiskForm({ title: '', riskLevel: 'medium', description: '', mitigation: '' }); }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>إضافة خطر جديد</DialogTitle>
@@ -6234,7 +6234,7 @@ export default function DMOPortal() {
       </Dialog>
 
       {/* Add Agreement Dialog */}
-      <Dialog open={isAddAgreementOpen} onOpenChange={setIsAddAgreementOpen}>
+      <Dialog open={isAddAgreementOpen} onOpenChange={(open) => { setIsAddAgreementOpen(open); if (!open) setAgreementForm({ title: '', partyName: '', agreementType: '', startDate: '', endDate: '' }); }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>اتفاقية مشاركة بيانات جديدة</DialogTitle>
@@ -6320,7 +6320,7 @@ export default function DMOPortal() {
       </Dialog>
 
       {/* Add Course Dialog */}
-      <Dialog open={isAddCourseOpen} onOpenChange={setIsAddCourseOpen}>
+      <Dialog open={isAddCourseOpen} onOpenChange={(open) => { setIsAddCourseOpen(open); if (!open) setCourseForm({ title: '', duration: '', level: 'مبتدئ', category: '' }); }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle>إضافة دورة تدريبية جديدة</DialogTitle>
