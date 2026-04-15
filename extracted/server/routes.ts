@@ -6578,7 +6578,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Create new referral
   app.post("/api/it-referrals", authenticateToken, createRateLimiter, async (req: any, res) => {
     try {
-      const { type, entityId, title, description, priority, fromDepartmentId, toDepartmentId, reason, dueDate, attachments } = req.body;
+      const { type, entityId, title, description, priority, fromDepartmentId, toDepartmentId, reason, dueDate, slaHours, attachments } = req.body;
 
       if (!title || !String(title).trim()) {
         return res.status(400).json({ error: 'عنوان الإحالة مطلوب' });
@@ -6621,6 +6621,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         referredById: req.user.id,
         reason,
         dueDate: dueDate ? new Date(dueDate) : null,
+        slaHours: slaHours ? parseInt(slaHours) : 48,
         attachments,
         status: 'pending'
       }).returning();
