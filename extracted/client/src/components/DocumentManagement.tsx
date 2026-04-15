@@ -175,7 +175,8 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/documents/${id}`);
+      const res = await apiRequest('DELETE', `/api/documents/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/documents?departmentId=${departmentId}`] });
@@ -186,8 +187,8 @@ export default function DocumentManagement({ departmentId, departmentName, navGr
     },
     onError: (error: Error) => {
       toast({
-        title: "خطأ",
-        description: "فشل في حذف المستند",
+        title: "خطأ في حذف المستند",
+        description: error.message,
         variant: "destructive",
       });
     },
