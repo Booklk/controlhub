@@ -1344,7 +1344,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (description !== undefined) updateData.description = description;
       if (priority !== undefined) updateData.priority = priority;
       if (status !== undefined) updateData.status = status;
-      if (progress !== undefined) updateData.progress = progress;
+      if (progress !== undefined) { const p = Number(progress); if (p < 0 || p > 100) return res.status(400).json({ error: "نسبة الإنجاز يجب أن تكون بين 0 و 100" }); updateData.progress = p; }
       if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
       if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
       if (budget !== undefined) updateData.budget = budget;
@@ -4094,6 +4094,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!title || !serviceType || !targetValue || !targetUnit) {
         return res.status(400).json({ error: 'العنوان ونوع الخدمة والقيمة المستهدفة ووحدة القياس مطلوبة' });
       }
+      if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+        return res.status(400).json({ error: 'تاريخ الانتهاء لا يمكن أن يكون قبل تاريخ البداية' });
+      }
       const parsedVendorId = parseInt(vendorId);
       if (!vendorId || isNaN(parsedVendorId)) {
         return res.status(400).json({ error: 'يجب تحديد المورد المرتبط باتفاقية SLA' });
@@ -6621,7 +6624,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         referredById: req.user.id,
         reason,
         dueDate: dueDate ? new Date(dueDate) : null,
-        slaHours: slaHours ? parseInt(slaHours) : 48,
+        slaHours: slaHours && parseInt(slaHours) > 0 ? parseInt(slaHours) : 48,
         attachments,
         status: 'pending'
       }).returning();

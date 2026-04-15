@@ -218,7 +218,8 @@ export default function SLAManagement({ departmentId, departmentName, navGroups,
         departmentId,
         projectId: data.projectId && data.projectId > 0 ? data.projectId : undefined,
       };
-      return apiRequest('POST', '/api/sla-agreements', payloadData);
+      const res = await apiRequest('POST', '/api/sla-agreements', payloadData);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sla-agreements', departmentId] });

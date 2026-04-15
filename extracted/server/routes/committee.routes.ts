@@ -819,6 +819,12 @@ export function registerCommitteeRoutes(app: Express) {
         const allMeetings = await storage.getCommitteeMeetings();
         nextMtgNum = allMeetings.length + 1;
       }
+      // منع جدولة اجتماع بالماضي
+      const meetingDate = new Date(req.body.scheduledDate || req.body.date);
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (meetingDate < today) {
+        return res.status(400).json({ error: 'لا يمكن جدولة اجتماع بتاريخ ماضي' });
+      }
       const meetingData = {
         ...req.body,
         meetingNumber: req.body.meetingNumber || `MTG-${mtgYear}-${String(nextMtgNum).padStart(4, '0')}`,
