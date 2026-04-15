@@ -407,7 +407,7 @@ export async function etlExternalSources(): Promise<number> {
         let responseTime: number | null = null;
         try {
           const { testConnection: testConn } = await import('../external-db');
-          const { decryptPassword } = await import('../integrations/dataDiscoveryEngine');
+          const { decrypt: decryptPassword } = await import('../integrations/dataDiscoveryEngine');
           const password = conn.encrypted_password ? decryptPassword(conn.encrypted_password) : '';
           const connStart = Date.now();
           const testResult = await testConn({

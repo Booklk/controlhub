@@ -856,8 +856,29 @@ export async function executeQuery(config: ConnectionConfig, query: string): Pro
       return await executeMySQLQuery(config, query);
     case 'sqlserver':
       return await executeSQLServerQuery(config, query);
+    case 'postgresql':
+      return await executePostgreSQLQuery(config, query);
     default:
-      throw new Error('نوع قاعدة البيانات غير مدعوم');
+      throw new Error(`نوع قاعدة البيانات "${config.databaseType}" غير مدعوم حالياً للاستعلامات المباشرة`);
+  }
+}
+
+async function executePostgreSQLQuery(config: ConnectionConfig, query: string): Promise<any[]> {
+  const client = new pg.Client({
+    host: config.host,
+    port: config.port,
+    database: config.databaseName,
+    user: config.username,
+    password: config.password,
+    ssl: config.sslEnabled ? { rejectUnauthorized: false } : undefined,
+    connectionTimeoutMillis: 10000,
+  });
+  try {
+    await client.connect();
+    const result = await client.query(query);
+    return result.rows;
+  } finally {
+    await client.end().catch(() => {});
   }
 }
 

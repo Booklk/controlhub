@@ -46,7 +46,7 @@ export function registerDataAnalyticsRoutes(app: Express) {
       // فك تشفير كلمة المرور
       let password = '';
       try {
-        const { decryptPassword } = await import('../integrations/dataDiscoveryEngine');
+        const { decrypt: decryptPassword } = await import('../integrations/dataDiscoveryEngine');
         password = conn.encrypted_password ? decryptPassword(conn.encrypted_password) : '';
       } catch { /* use empty */ }
 
@@ -109,7 +109,7 @@ export function registerDataAnalyticsRoutes(app: Express) {
 
       let password = '';
       try {
-        const { decryptPassword } = await import('../integrations/dataDiscoveryEngine');
+        const { decrypt: decryptPassword } = await import('../integrations/dataDiscoveryEngine');
         password = conn.encrypted_password ? decryptPassword(conn.encrypted_password) : '';
       } catch { /* use empty */ }
 
