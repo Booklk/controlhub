@@ -359,7 +359,7 @@ export default function KnowledgeBase({ departmentId, departmentName, navGroups,
                 إلغاء
               </Button>
               <Button 
-                onClick={() => createArticleMutation.mutate(newArticle)}
+                onClick={() => createArticleMutation.mutate(newArticle)} disabled={createArticleMutation.isPending}
                 disabled={!newArticle.title || !newArticle.content || createArticleMutation.isPending}
                 data-testid="button-submit-article"
               >

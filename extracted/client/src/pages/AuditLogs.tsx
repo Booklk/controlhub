@@ -165,7 +165,7 @@ function LogSkeleton() {
 }
 
 function ActivityHeatmap({ data }: { data: { hour: number; count: number }[] }) {
-  const maxCount = Math.max(...data.map(d => d.count), 1);
+  const maxCount = Math.max(...(data || []).map(d => d.count), 1);
   return (
     <div className="flex items-end gap-1 h-20">
       {Array.from({ length: 24 }, (_, hour) => {

@@ -489,7 +489,7 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
                     <DialogFooter>
                       <Button variant="outline" onClick={() => { setIsAddDialogOpen(false); resetForm(); }} data-testid="button-cancel-task">إلغاء</Button>
                       <Button
-                        onClick={() => createTaskMutation.mutate(formData)}
+                        onClick={() => createTaskMutation.mutate(formData)} disabled={createTaskMutation.isPending}
                         disabled={createTaskMutation.isPending || !formData.title.trim()}
                         className="hub-btn-gold gap-1.5"
                         data-testid="button-create-task"
@@ -888,7 +888,7 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
             <DialogFooter>
               <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditingTask(null); resetForm(); }} data-testid="button-cancel-edit-task">إلغاء</Button>
               <Button
-                onClick={() => editingTask && updateTaskMutation.mutate({ id: editingTask.id, updates: formData })}
+                onClick={() => editingTask && updateTaskMutation.mutate({ id: editingTask.id, updates: formData })} disabled={updateTaskMutation.isPending}
                 disabled={updateTaskMutation.isPending || !formData.title.trim()}
                 className="hub-btn-gold gap-1.5"
                 data-testid="button-update-task"

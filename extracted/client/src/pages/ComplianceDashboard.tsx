@@ -123,7 +123,7 @@ export default function ComplianceDashboard({ navGroups, portalName }: Complianc
               </CardContent>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {data.bodies.map(body => {
+              {data?.bodies?.map(body => {
                 const colors = BODY_COLORS[body.regulatoryBody] || BODY_COLORS.NCA;
                 const Icon = BODY_ICONS[body.regulatoryBody] || Shield;
                 const link = BODY_LINKS[body.regulatoryBody] || '#';
@@ -171,7 +171,7 @@ export default function ComplianceDashboard({ navGroups, portalName }: Complianc
                       {data.overall.completed} ضابط مكتمل من أصل {data.overall.total} ضابط
                     </p>
                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-4">
-                      {data.bodies.map(b => (
+                      {data?.bodies?.map(b => (
                         <div key={b.regulatoryBody} className="flex items-center gap-2">
                           <div className={`w-3 h-3 rounded-full ${BODY_COLORS[b.regulatoryBody]?.bg || 'bg-muted'}`} />
                           <span className="text-xs text-muted-foreground">{b.labelEn}: {b.complianceRate}%</span>
@@ -198,7 +198,7 @@ export default function ComplianceDashboard({ navGroups, portalName }: Complianc
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {data.bodies.map(body => {
+              {data?.bodies?.map(body => {
                 const colors = BODY_COLORS[body.regulatoryBody] || BODY_COLORS.NCA;
                 const Icon = BODY_ICONS[body.regulatoryBody] || Shield;
                 const link = BODY_LINKS[body.regulatoryBody] || '#';
@@ -286,7 +286,7 @@ export default function ComplianceDashboard({ navGroups, portalName }: Complianc
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {data.bodies.map(body => (
+                  {data?.bodies?.map(body => (
                     <div key={body.regulatoryBody}>
                       <p className="text-xs font-medium mb-2 flex items-center gap-1.5">
                         <span className={`w-2 h-2 rounded-full ${BODY_COLORS[body.regulatoryBody]?.bg || 'bg-muted'}`} />
