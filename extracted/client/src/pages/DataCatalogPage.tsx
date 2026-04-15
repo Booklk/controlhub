@@ -547,83 +547,107 @@ export default function DataCatalogPage() {
   };
 
   const createSystemMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/external-systems", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/external-systems", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-systems"] });
       setIsSystemDialogOpen(false);
       setSystemForm(initialSystemForm);
       toast({ title: "تم تسجيل النظام بنجاح" });
     },
-    onError: () => toast({ title: "فشل في تسجيل النظام", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const updateSystemMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PUT", `/api/external-systems/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/external-systems/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-systems"] });
       setIsSystemDialogOpen(false);
       setEditingSystem(null);
       toast({ title: "تم تحديث النظام" });
     },
-    onError: () => toast({ title: "فشل في تحديث النظام", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const deleteSystemMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/external-systems/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/external-systems/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-systems"] });
       toast({ title: "تم حذف النظام" });
     },
-    onError: () => toast({ title: "فشل في حذف النظام", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const healthCheckMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/external-systems/${id}/health-check`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/external-systems/${id}/health-check`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/external-systems"] });
       toast({ title: "تم فحص حالة النظام" });
     },
-    onError: () => toast({ title: "فشل فحص الاتصال", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const createConnectionMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/database-connections", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/database-connections", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/database-connections"] });
       setIsConnectionDialogOpen(false);
       setConnectionForm(initialConnectionForm);
       toast({ title: "تم إضافة الاتصال بنجاح" });
     },
-    onError: () => toast({ title: "فشل في إضافة اتصال قاعدة البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const updateConnectionMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PUT", `/api/database-connections/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/database-connections/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/database-connections"] });
       setIsConnectionDialogOpen(false);
       setEditingConnection(null);
       toast({ title: "تم تحديث الاتصال" });
     },
-    onError: () => toast({ title: "فشل في تحديث اتصال قاعدة البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const deleteConnectionMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/database-connections/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/database-connections/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/database-connections"] });
       toast({ title: "تم حذف الاتصال" });
     },
-    onError: () => toast({ title: "فشل في حذف اتصال قاعدة البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const testConnectionMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/database-connections/${id}/test`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/database-connections/${id}/test`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/database-connections"] });
       toast({ title: "تم اختبار الاتصال بنجاح" });
     },
-    onError: () => toast({ title: "فشل اختبار الاتصال", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const discoverTablesMutation = useMutation({
@@ -654,7 +678,7 @@ export default function DataCatalogPage() {
       setIsDiscoverDialogOpen(true);
       toast({ title: `تم اكتشاف ${data.tablesCount || tables.length} جدول` });
     },
-    onError: () => toast({ title: "فشل في اكتشاف الجداول", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const registerDiscoveredAssetsMutation = useMutation({
@@ -668,140 +692,179 @@ export default function DataCatalogPage() {
       setIsDiscoverDialogOpen(false);
       toast({ title: `تم تسجيل ${data.registered} أصل بيانات بنجاح` });
     },
-    onError: () => toast({ title: "فشل في تسجيل الأصول", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const createAssetMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/data-assets", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/data-assets", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-assets"] });
       setIsAssetDialogOpen(false);
       setAssetForm(initialAssetForm);
       toast({ title: "تم تسجيل أصل البيانات بنجاح" });
     },
-    onError: () => toast({ title: "فشل في تسجيل أصل البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const updateAssetMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PUT", `/api/data-assets/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/data-assets/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-assets"] });
       setIsAssetDialogOpen(false);
       setEditingAsset(null);
       toast({ title: "تم تحديث أصل البيانات" });
     },
-    onError: () => toast({ title: "فشل في تحديث أصل البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const deleteAssetMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/data-assets/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/data-assets/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-assets"] });
       toast({ title: "تم حذف أصل البيانات" });
     },
-    onError: () => toast({ title: "فشل في حذف أصل البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const createFlowMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/data-flow-mappings", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/data-flow-mappings", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-flow-mappings"] });
       setIsFlowDialogOpen(false);
       setFlowForm(initialFlowForm);
       toast({ title: "تم إضافة التدفق بنجاح" });
     },
-    onError: () => toast({ title: "فشل في إضافة تدفق البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const updateFlowMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PUT", `/api/data-flow-mappings/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/data-flow-mappings/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-flow-mappings"] });
       setIsFlowDialogOpen(false);
       setEditingFlow(null);
       toast({ title: "تم تحديث التدفق" });
     },
-    onError: () => toast({ title: "فشل في تحديث تدفق البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const deleteFlowMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/data-flow-mappings/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/data-flow-mappings/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-flow-mappings"] });
       toast({ title: "تم حذف التدفق" });
     },
-    onError: () => toast({ title: "فشل في حذف تدفق البيانات", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const createDictionaryMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/data-dictionary", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/data-dictionary", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-dictionary"] });
       setIsDictionaryDialogOpen(false);
       setDictionaryForm(initialDictionaryForm);
       toast({ title: "تم إضافة المصطلح بنجاح" });
     },
-    onError: () => toast({ title: "فشل في إضافة مصطلح القاموس", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const updateDictionaryMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PUT", `/api/data-dictionary/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/data-dictionary/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-dictionary"] });
       setIsDictionaryDialogOpen(false);
       setEditingDictionary(null);
       toast({ title: "تم تحديث المصطلح" });
     },
-    onError: () => toast({ title: "فشل في تحديث مصطلح القاموس", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const deleteDictionaryMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/data-dictionary/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/data-dictionary/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-dictionary"] });
       toast({ title: "تم حذف المصطلح" });
     },
-    onError: () => toast({ title: "فشل في حذف مصطلح القاموس", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const createLineageMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/data-lineage", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/data-lineage", data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-lineage"] });
       setIsLineageDialogOpen(false);
       toast({ title: "تم إضافة مسار البيانات" });
     },
-    onError: () => toast({ title: "فشل في إضافة المسار", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const updateLineageMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest("PUT", `/api/data-lineage/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/data-lineage/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-lineage"] });
       setIsLineageDialogOpen(false);
       setEditingLineage(null);
       toast({ title: "تم تحديث مسار البيانات" });
     },
-    onError: () => toast({ title: "فشل في تحديث المسار", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const deleteLineageMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/data-lineage/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/data-lineage/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/data-lineage"] });
       toast({ title: "تم حذف مسار البيانات" });
     },
-    onError: () => toast({ title: "فشل في حذف المسار", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const runAllQualityMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/data-quality/run-all"),
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/data-quality/run-all");
+      return res.json();
+    },
     onSuccess: () => {
       refetchHealth();
       queryClient.invalidateQueries({ queryKey: ["/api/data-quality"] });
       toast({ title: "تم تشغيل فحص الجودة بنجاح" });
     },
-    onError: () => toast({ title: "فشل في تشغيل فحص الجودة", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "خطأ", description: error.message, variant: "destructive" }),
   });
 
   const handleEditLineage = (item: any) => {

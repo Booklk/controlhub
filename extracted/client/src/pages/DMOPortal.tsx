@@ -264,8 +264,10 @@ export default function DMOPortal() {
   });
 
   const dispatchDsrMutation = useMutation({
-    mutationFn: (data: { dsrId: number; systems: any[]; actionType: string }) =>
-      apiRequest('POST', `/api/dsr/${data.dsrId}/dispatch`, { systems: data.systems, actionType: data.actionType }),
+    mutationFn: async (data: { dsrId: number; systems: any[]; actionType: string }) => {
+      const res = await apiRequest('POST', `/api/dsr/${data.dsrId}/dispatch`, { systems: data.systems, actionType: data.actionType });
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: 'تم الإرسال', description: 'تم إرسال الطلب إلى الأنظمة المحددة بنجاح' });
       queryClient.invalidateQueries({ queryKey: ['/api/dsr'] });
@@ -278,8 +280,10 @@ export default function DMOPortal() {
   });
 
   const updateDsrActionMutation = useMutation({
-    mutationFn: (data: { dsrId: number; actionId: number; status: string; notes?: string }) =>
-      apiRequest('PUT', `/api/dsr/${data.dsrId}/system-actions/${data.actionId}`, { status: data.status, notes: data.notes }),
+    mutationFn: async (data: { dsrId: number; actionId: number; status: string; notes?: string }) => {
+      const res = await apiRequest('PUT', `/api/dsr/${data.dsrId}/system-actions/${data.actionId}`, { status: data.status, notes: data.notes });
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: 'تم التحديث' });
       if (selectedDsrForDetail?.id) queryClient.invalidateQueries({ queryKey: ['/api/dsr', String(selectedDsrForDetail.id), 'system-actions'] });
@@ -289,8 +293,10 @@ export default function DMOPortal() {
   });
 
   const deleteDsrActionMutation = useMutation({
-    mutationFn: (data: { dsrId: number; actionId: number }) =>
-      apiRequest('DELETE', `/api/dsr/${data.dsrId}/system-actions/${data.actionId}`),
+    mutationFn: async (data: { dsrId: number; actionId: number }) => {
+      const res = await apiRequest('DELETE', `/api/dsr/${data.dsrId}/system-actions/${data.actionId}`);
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: 'تم الحذف' });
       if (selectedDsrForDetail?.id) queryClient.invalidateQueries({ queryKey: ['/api/dsr', String(selectedDsrForDetail.id), 'system-actions'] });
@@ -299,7 +305,10 @@ export default function DMOPortal() {
   });
 
   const createDsrMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/dsr', data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('POST', '/api/dsr', data);
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: 'تم الإنشاء', description: 'تم تسجيل طلب صاحب البيانات بنجاح' });
       queryClient.invalidateQueries({ queryKey: ['/api/dsr'] });
@@ -331,8 +340,8 @@ export default function DMOPortal() {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       toast({ title: 'تم تحديد جميع الإشعارات كمقروءة' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -390,14 +399,15 @@ export default function DMOPortal() {
       setIsAddAssetOpen(false);
       setAssetForm({ name: '', nameEn: '', description: '', system: '', owner: '', classification: 'restricted', dataType: 'structured', status: 'active', databaseName: '', schemaName: '', tableName: '', connectionType: '' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إضافة الأصل', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
   const updateAssetMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      await apiRequest('PUT', `/api/data-assets/${id}`, data);
+      const res = await apiRequest('PUT', `/api/data-assets/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-assets'] });
@@ -405,21 +415,22 @@ export default function DMOPortal() {
       setEditingAsset(null);
       setIsAddAssetOpen(false);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تحديث الأصل', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
   const deleteAssetMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/data-assets/${id}`);
+      const res = await apiRequest('DELETE', `/api/data-assets/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-assets'] });
       toast({ title: 'تم حذف الأصل البياني بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في حذف الأصل', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -433,8 +444,8 @@ export default function DMOPortal() {
       const statusAr: Record<string, string> = { pending: 'قيد الانتظار', in_progress: 'قيد المعالجة', completed: 'مكتمل', rejected: 'مرفوض' };
       toast({ title: `تم تحديث حالة الطلب إلى: ${statusAr[vars.status] || vars.status}` });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تحديث الحالة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -464,8 +475,8 @@ export default function DMOPortal() {
       setIsAddComplianceReportOpen(false);
       setSuccessComplianceReport(null);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إنشاء التقرير', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -487,28 +498,30 @@ export default function DMOPortal() {
 
   const updateDecisionMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      await apiRequest('PUT', `/api/committee/decisions/${id}`, data);
+      const res = await apiRequest('PUT', `/api/committee/decisions/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       toast({ title: 'تم تحديث القرار بنجاح' });
       setEditingDecision(null);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تحديث القرار', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
   const deleteDecisionMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/committee/decisions/${id}`);
+      const res = await apiRequest('DELETE', `/api/committee/decisions/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/committee/decisions'] });
       toast({ title: 'تم حذف القرار بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في حذف القرار', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -523,8 +536,8 @@ export default function DMOPortal() {
       setIsAddRiskOpen(false);
       setRiskForm({ title: '', riskLevel: 'medium', description: '', mitigation: '' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إضافة المخاطرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -547,28 +560,30 @@ export default function DMOPortal() {
 
   const updateStewardMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      await apiRequest('PUT', `/api/data-stewards/${id}`, data);
+      const res = await apiRequest('PUT', `/api/data-stewards/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-stewards'] });
       toast({ title: 'تم تحديث ممثل البيانات بنجاح' });
       setIsAddStewardOpen(false);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تحديث ممثل البيانات', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
   const deleteStewardMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/data-stewards/${id}`);
+      const res = await apiRequest('DELETE', `/api/data-stewards/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-stewards'] });
       toast({ title: 'تم حذف ممثل البيانات بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في حذف ممثل البيانات', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -583,35 +598,37 @@ export default function DMOPortal() {
       setIsAddDictionaryOpen(false);
       setDictionaryForm({ term: '', termEn: '', definition: '', category: '', dataType: '', dataAssetId: '', columnName: '', businessRule: '' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إضافة المصطلح', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
   const updateDictionaryMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      await apiRequest('PUT', `/api/data-dictionary/${id}`, data);
+      const res = await apiRequest('PUT', `/api/data-dictionary/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-dictionary'] });
       toast({ title: 'تم تحديث المصطلح بنجاح' });
       setEditingDictionaryTerm(null);
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تحديث المصطلح', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
   const deleteDictionaryMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/data-dictionary/${id}`);
+      const res = await apiRequest('DELETE', `/api/data-dictionary/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-dictionary'] });
       toast({ title: 'تم حذف المصطلح بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في حذف المصطلح', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -628,14 +645,15 @@ export default function DMOPortal() {
       setTableColumns([]);
       setQualityForm({ name: '', dimension: 'الدقة', ruleType: 'validation', threshold: 90, currentScore: 0, description: '', status: 'active', targetTable: '', targetColumn: '', systemName: '', severity: 'medium', validationPattern: '', sqlExpression: '', connectionId: 0 });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إضافة قاعدة الجودة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
   const updateQualityRuleMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      await apiRequest('PUT', `/api/data-quality/${id}`, data);
+      const res = await apiRequest('PUT', `/api/data-quality/${id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-quality'] });
@@ -645,21 +663,22 @@ export default function DMOPortal() {
       setTableColumns([]);
       setQualityForm({ name: '', dimension: 'الدقة', ruleType: 'validation', threshold: 90, currentScore: 0, description: '', status: 'active', targetTable: '', targetColumn: '', systemName: '', severity: 'medium', validationPattern: '', sqlExpression: '', connectionId: 0 });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في تحديث القاعدة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
   const deleteQualityRuleMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/data-quality/${id}`);
+      const res = await apiRequest('DELETE', `/api/data-quality/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-quality'] });
       toast({ title: 'تم حذف القاعدة بنجاح' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في حذف القاعدة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: 'destructive' });
     }
   });
 
@@ -713,7 +732,7 @@ export default function DMOPortal() {
   });
 
   const deleteSystemMutation = useMutation({
-    mutationFn: async (id: number) => { await apiRequest('DELETE', `/api/external-systems/${id}`); },
+    mutationFn: async (id: number) => { const res = await apiRequest('DELETE', `/api/external-systems/${id}`); return res.json(); },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/external-systems'] }); toast({ title: 'تم حذف النظام' }); },
     onError: () => { toast({ title: 'خطأ في حذف النظام', variant: 'destructive' }); }
   });
@@ -919,7 +938,7 @@ export default function DMOPortal() {
   };
 
   const deleteRuleMutation = useMutation({
-    mutationFn: async (id: number) => { await apiRequest('DELETE', `/api/data-quality/${id}`); },
+    mutationFn: async (id: number) => { const res = await apiRequest('DELETE', `/api/data-quality/${id}`); return res.json(); },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/data-quality'] }); toast({ title: 'تم حذف القاعدة' }); },
     onError: (error: Error) => {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -940,7 +959,7 @@ export default function DMOPortal() {
   });
 
   const deleteFlowMappingMutation = useMutation({
-    mutationFn: async (id: number) => { await apiRequest('DELETE', `/api/data-flow-mappings/${id}`); },
+    mutationFn: async (id: number) => { const res = await apiRequest('DELETE', `/api/data-flow-mappings/${id}`); return res.json(); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-flow-mappings'] });
       toast({ title: 'تم حذف خريطة تدفق البيانات' });
