@@ -4600,7 +4600,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.delete("/api/documents/:id", authenticateToken, requireDelete(RESOURCES.DOCUMENTS), async (req: any, res) => {
+  app.delete("/api/documents/:id", authenticateToken, async (req: any, res) => {
     try {
       const id = parseId(req.params.id, res);
       if (!id) return;
@@ -4608,11 +4608,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!existing) {
         return res.status(404).json({ error: 'المستند غير موجود' });
       }
-      const isAdmin = req.user.role === 'system_admin';
-      const isITDirector = req.user.role === 'it_director' || req.user.portal === 'it_director';
+      const isAdmin = req.user.role === 'system_admin' || req.user.role === 'admin';
+      const isITDirector = req.user.role === 'it_director';
+      const isCreator = existing.createdBy === req.user.id;
+      const isManager = req.user.role?.includes('manager');
       const userDeptId = PORTAL_TO_DEPT_ID[req.user.portal] || req.user.itDepartmentId || null;
-      if (!isITDirector && !isAdmin && Number(existing.departmentId) !== Number(userDeptId)) {
-        return res.status(403).json({ error: 'لا يمكنك حذف هذا المستند' });
+      const sameDept = Number(existing.departmentId) === Number(userDeptId);
+      // المنشئ يحذف مستنده + المدير يحذف مستندات إدارته + الأدمن يحذف الكل
+      if (!isAdmin && !isITDirector && !isCreator && !(isManager && sameDept)) {
+        return res.status(403).json({ error: 'يمكنك حذف المستندات التي أنشأتها فقط' });
       }
       await db.delete(documents).where(eq(documents.id, id));
       res.json({ success: true });
