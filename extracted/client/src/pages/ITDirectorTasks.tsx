@@ -214,37 +214,43 @@ export default function ITDirectorTasks() {
 
   // ─── Mutations ───────────────────────────────────────────────
   const createMutation = useMutation({
-    mutationFn: (data: typeof form) => apiRequest('POST', '/api/tasks', {
-      title: data.title,
-      description: data.description || null,
-      departmentId: parseInt(data.departmentId),
-      assignedTo: data.assignedTo ? parseInt(data.assignedTo) : null,
-      priority: data.priority,
-      dueDate: data.dueDate || null,
-      notes: data.notes || null,
-      estimatedHours: data.estimatedHours ? parseInt(data.estimatedHours) : null,
-      sendEmail: data.sendEmail,
-    }),
+    mutationFn: async (data: typeof form) => {
+      const res = await apiRequest('POST', '/api/tasks', {
+        title: data.title,
+        description: data.description || null,
+        departmentId: parseInt(data.departmentId),
+        assignedTo: data.assignedTo ? parseInt(data.assignedTo) : null,
+        priority: data.priority,
+        dueDate: data.dueDate || null,
+        notes: data.notes || null,
+        estimatedHours: data.estimatedHours ? parseInt(data.estimatedHours) : null,
+        sendEmail: data.sendEmail,
+      });
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: '✅ تم إنشاء المهمة', description: `تم إنشاء "${form.title}" وإرسالها للإدارة` });
       queryClient.invalidateQueries({ queryKey: ['/api/director/tasks/overview'] });
       setCreateOpen(false);
       resetForm();
     },
-    onError: (e: any) => toast({ title: 'خطأ', description: e.message, variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'خطأ', description: error.message, variant: 'destructive' }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: typeof form) => apiRequest('PATCH', `/api/tasks/${editingItem?.id}`, {
-      title: data.title,
-      description: data.description || null,
-      departmentId: parseInt(data.departmentId),
-      assignedTo: data.assignedTo ? parseInt(data.assignedTo) : null,
-      priority: data.priority,
-      dueDate: data.dueDate || null,
-      notes: data.notes || null,
-      estimatedHours: data.estimatedHours ? parseInt(data.estimatedHours) : null,
-    }),
+    mutationFn: async (data: typeof form) => {
+      const res = await apiRequest('PATCH', `/api/tasks/${editingItem?.id}`, {
+        title: data.title,
+        description: data.description || null,
+        departmentId: parseInt(data.departmentId),
+        assignedTo: data.assignedTo ? parseInt(data.assignedTo) : null,
+        priority: data.priority,
+        dueDate: data.dueDate || null,
+        notes: data.notes || null,
+        estimatedHours: data.estimatedHours ? parseInt(data.estimatedHours) : null,
+      });
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: '✅ تم تحديث المهمة', description: `تم تحديث "${form.title}" بنجاح` });
       queryClient.invalidateQueries({ queryKey: ['/api/director/tasks/overview'] });
@@ -256,14 +262,16 @@ export default function ITDirectorTasks() {
   });
 
   const sendToDeptMutation = useMutation({
-    mutationFn: ({ id, deptId }: { id: number; deptId: number }) =>
-      apiRequest('POST', `/api/planner/tasks/${id}/send-to-tasks`, { targetDepartmentId: deptId }),
+    mutationFn: async ({ id, deptId }: { id: number; deptId: number }) => {
+      const res = await apiRequest('POST', `/api/planner/tasks/${id}/send-to-tasks`, { targetDepartmentId: deptId });
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: '✅ تم النقل', description: 'تم نقل المهمة من البلانر إلى مهام الإدارة' });
       queryClient.invalidateQueries({ queryKey: ['/api/director/tasks/overview'] });
       setSendToPlannerTask(null);
     },
-    onError: (e: any) => toast({ title: 'خطأ', description: e.message, variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'خطأ', description: error.message, variant: 'destructive' }),
   });
 
   // ─── Helpers ─────────────────────────────────────────────────

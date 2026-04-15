@@ -215,7 +215,10 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => apiRequest('PUT', `/api/it-tickets/${id}/status`, { status }),
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const res = await apiRequest('PUT', `/api/it-tickets/${id}/status`, { status });
+      return res.json();
+    },
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: [queryKey] });
       const prev = queryClient.getQueryData<any[]>([queryKey]);
@@ -224,9 +227,9 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
       );
       return { prev };
     },
-    onError: (_err, _vars, context) => {
+    onError: (error: Error, _vars, context) => {
       if (context?.prev) queryClient.setQueryData([queryKey], context.prev);
-      toast({ title: "حدث خطأ في تحديث الحالة", variant: "destructive" });
+      toast({ title: "حدث خطأ في تحديث الحالة", description: error.message, variant: "destructive" });
     },
     onSettled: () => {
       invalidateAll();
@@ -237,7 +240,10 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest('PUT', `/api/it-tickets/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest('PUT', `/api/it-tickets/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       invalidateAll();
       setIsAddDialogOpen(false);
@@ -245,11 +251,14 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
       resetForm();
       toast({ title: "تم تحديث التذكرة بنجاح" });
     },
-    onError: () => toast({ title: "حدث خطأ في التحديث", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "حدث خطأ في التحديث", description: error.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/it-tickets/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/it-tickets/${id}`);
+      return res.json();
+    },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: [queryKey] });
       const prev = queryClient.getQueryData<any[]>([queryKey]);
@@ -258,9 +267,9 @@ export default function DepartmentTicketsPage({ config }: { config: DepartmentTi
       );
       return { prev };
     },
-    onError: (_err, _id, context) => {
+    onError: (error: Error, _id, context) => {
       if (context?.prev) queryClient.setQueryData([queryKey], context.prev);
-      toast({ title: "حدث خطأ في الحذف", variant: "destructive" });
+      toast({ title: "حدث خطأ في الحذف", description: error.message, variant: "destructive" });
     },
     onSettled: () => {
       invalidateAll();

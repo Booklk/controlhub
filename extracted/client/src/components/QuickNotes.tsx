@@ -49,30 +49,48 @@ export function QuickNotes({ portal }: QuickNotesProps) {
   });
 
   const addMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/quick-notes', data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('POST', '/api/quick-notes', data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/quick-notes', portal] });
       setNewNote('');
       setNewColor('default');
       setShowAdd(false);
       toast({ title: 'تم إضافة الملاحظة' });
-    }
+    },
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest('PATCH', `/api/quick-notes/${id}`, data),
+    mutationFn: async ({ id, ...data }: any) => {
+      const res = await apiRequest('PATCH', `/api/quick-notes/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/quick-notes', portal] });
       setEditingId(null);
-    }
+    },
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/quick-notes/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/quick-notes/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/quick-notes', portal] });
       toast({ title: 'تم حذف الملاحظة' });
-    }
+    },
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+    },
   });
 
   const getColorClasses = (color: string) => {

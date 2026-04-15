@@ -344,13 +344,19 @@ export default function EmployeePortal() {
   });
 
   const markReadMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("PUT", `/api/notifications/${id}/read`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PUT", `/api/notifications/${id}/read`);
+      return res.json();
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
     onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: "destructive" }); },
   });
 
   const markAllReadMutation = useMutation({
-    mutationFn: () => apiRequest("PUT", "/api/notifications/read-all"),
+    mutationFn: async () => {
+      const res = await apiRequest("PUT", "/api/notifications/read-all");
+      return res.json();
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
     onError: (error: Error) => { toast({ title: "خطأ", description: error.message, variant: "destructive" }); },
   });

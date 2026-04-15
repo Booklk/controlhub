@@ -277,11 +277,14 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
       resetForm();
       invalidateAll();
     },
-    onError: () => toast({ title: 'خطأ', description: 'حدث خطأ أثناء إنشاء المهمة', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'خطأ', description: error.message, variant: 'destructive' }),
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: async (data: { id: number; updates: any }) => apiRequest('PATCH', `/api/tasks/${data.id}`, data.updates),
+    mutationFn: async (data: { id: number; updates: any }) => {
+      const res = await apiRequest('PATCH', `/api/tasks/${data.id}`, data.updates);
+      return res.json();
+    },
     onSuccess: () => {
       toast({ title: 'تم تحديث المهمة بنجاح' });
       setIsEditDialogOpen(false);
@@ -289,7 +292,7 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
       resetForm();
       invalidateAll();
     },
-    onError: () => toast({ title: 'خطأ في التحديث', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'خطأ في التحديث', description: error.message, variant: 'destructive' }),
   });
 
   const bulkStatusMutation = useMutation({
@@ -301,11 +304,14 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
       exitBulkMode();
       invalidateAll();
     },
-    onError: () => toast({ title: 'حدث خطأ في التحديث الجماعي', variant: 'destructive' }),
+    onError: (error: Error) => toast({ title: 'حدث خطأ في التحديث الجماعي', description: error.message, variant: 'destructive' }),
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => apiRequest('PATCH', `/api/tasks/${id}/status`, { status }),
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const res = await apiRequest('PATCH', `/api/tasks/${id}/status`, { status });
+      return res.json();
+    },
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: taskQueryKey });
       const prev = queryClient.getQueryData<Task[]>(taskQueryKey);
@@ -314,9 +320,9 @@ export default function DepartmentTasksPage({ config }: { config: DepartmentTask
       );
       return { prev };
     },
-    onError: (_err, _vars, context) => {
+    onError: (error: Error, _vars, context) => {
       if (context?.prev) queryClient.setQueryData(taskQueryKey, context.prev);
-      toast({ title: 'حدث خطأ في تحديث الحالة', variant: 'destructive' });
+      toast({ title: 'حدث خطأ في تحديث الحالة', description: error.message, variant: 'destructive' });
     },
     onSettled: () => invalidateAll(),
     onSuccess: () => toast({ title: 'تم تحديث الحالة' }),

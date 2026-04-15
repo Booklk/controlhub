@@ -120,22 +120,23 @@ export default function ITDepartmentSupport() {
       setIsNewTicketOpen(false);
       setTicketForm({ title: '', category: 'technical', priority: 'medium', description: '' });
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ في إنشاء التذكرة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'حدث خطأ في إنشاء التذكرة', description: error.message, variant: 'destructive' });
     }
   });
 
   const updateTaskStatus = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: number; status: string }) => {
-      return apiRequest('PUT', `/api/tasks/${taskId}/status`, { status });
+      const res = await apiRequest('PUT', `/api/tasks/${taskId}/status`, { status });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/it-department/${DEPARTMENT_ID}`] });
       toast({ title: 'تم تحديث حالة المهمة بنجاح' });
       setSelectedTask(null);
     },
-    onError: () => {
-      toast({ title: 'فشل تحديث حالة المهمة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'فشل تحديث حالة المهمة', description: error.message, variant: 'destructive' });
     },
   });
 

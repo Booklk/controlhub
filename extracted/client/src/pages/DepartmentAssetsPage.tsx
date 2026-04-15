@@ -62,40 +62,48 @@ export default function DepartmentAssetsPage({ departmentId, departmentName, nav
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/it-assets", { ...data, departmentId }),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/it-assets", { ...data, departmentId });
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/it-assets?departmentId=${departmentId}`] });
       setIsDialogOpen(false);
       resetForm();
       toast({ title: "تم إضافة الأصل" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في إضافة الأصل', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في إضافة الأصل', description: error.message, variant: 'destructive' });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest("PUT", `/api/it-assets/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/it-assets/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/it-assets?departmentId=${departmentId}`] });
       setIsDialogOpen(false);
       setEditing(null);
       toast({ title: "تم تحديث الأصل" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في تحديث الأصل', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في تحديث الأصل', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/it-assets/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/it-assets/${id}`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/it-assets?departmentId=${departmentId}`] });
       toast({ title: "تم حذف الأصل" });
     },
-    onError: () => {
-      toast({ title: 'خطأ في حذف الأصل', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ في حذف الأصل', description: error.message, variant: 'destructive' });
     },
   });
 

@@ -243,7 +243,7 @@ export default function ITDirectorDashboard() {
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: typeof taskForm) => {
-      return apiRequest('POST', '/api/tasks', {
+      const res = await apiRequest('POST', '/api/tasks', {
         title: data.title,
         description: data.description,
         departmentId: parseInt(data.departmentId),
@@ -252,11 +252,12 @@ export default function ITDirectorDashboard() {
         assignedBy: user?.id,
         sendEmailNotification: data.sendEmail,
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: 'تم بنجاح',
-        description: taskForm.sendEmail 
+        description: taskForm.sendEmail
           ? 'تم إرسال المهمة وإشعار الإدارة بالبريد الإلكتروني'
           : 'تم إرسال المهمة للإدارة',
       });
@@ -264,8 +265,8 @@ export default function ITDirectorDashboard() {
       setTaskForm({ title: '', description: '', departmentId: '', priority: 'medium', dueDate: '', sendEmail: true });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/it-director'] });
     },
-    onError: () => {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء إرسال المهمة', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     },
   });
 

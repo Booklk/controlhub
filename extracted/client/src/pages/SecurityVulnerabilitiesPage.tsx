@@ -66,8 +66,10 @@ export default function SecurityVulnerabilitiesPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest("PUT", `/api/security-vulnerabilities/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/security-vulnerabilities/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/security-vulnerabilities"] });
       invalidateRelatedQueries('/api/security-vulnerabilities');
@@ -81,7 +83,7 @@ export default function SecurityVulnerabilitiesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/security-vulnerabilities/${id}`),
+    mutationFn: async (id: number) => { const res = await apiRequest("DELETE", `/api/security-vulnerabilities/${id}`); return res.json(); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/security-vulnerabilities"] });
       invalidateRelatedQueries('/api/security-vulnerabilities');

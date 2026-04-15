@@ -103,11 +103,12 @@ export default function KnowledgeBase({ departmentId, departmentName, navGroups,
 
   const createArticleMutation = useMutation({
     mutationFn: async (data: typeof newArticle) => {
-      return apiRequest('POST', '/api/knowledge-base', {
+      const res = await apiRequest('POST', '/api/knowledge-base', {
         ...data,
         departmentId,
         tags: data.tags.split(',').map(t => t.trim()).filter(Boolean),
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base?departmentId=${departmentId}`] });
@@ -115,18 +116,22 @@ export default function KnowledgeBase({ departmentId, departmentName, navGroups,
       setNewArticle({ title: '', content: '', category: 'guide', tags: '' });
       toast({ title: "تم بنجاح", description: "تم إنشاء المقال" });
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل في إنشاء المقال", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 
   const markHelpfulMutation = useMutation({
     mutationFn: async (articleId: number) => {
-      return apiRequest('POST', `/api/knowledge-base/${articleId}/helpful`, {});
+      const res = await apiRequest('POST', `/api/knowledge-base/${articleId}/helpful`, {});
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base?departmentId=${departmentId}`] });
       toast({ title: "شكراً لملاحظاتك!" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 

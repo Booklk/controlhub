@@ -48,10 +48,11 @@ export default function ChangePassword() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/auth/change-password", {
+      const res = await apiRequest("POST", "/api/auth/change-password", {
         currentPassword: isMandatory ? undefined : currentPassword,
         newPassword,
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "تم تغيير كلمة المرور بنجاح", description: "يمكنك الآن استخدام كلمة المرور الجديدة" });
@@ -71,9 +72,8 @@ export default function ChangePassword() {
       };
       navigate(portalHome[portal] || "/");
     },
-    onError: (err: any) => {
-      const msg = err?.message || "حدث خطأ في تغيير كلمة المرور";
-      toast({ title: "خطأ", description: msg, variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 

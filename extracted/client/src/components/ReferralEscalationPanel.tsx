@@ -51,7 +51,7 @@ export function ReferralDialog({
 
   const createReferralMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/it-referrals", {
+      const res = await apiRequest("POST", "/api/it-referrals", {
         type: entityType,
         entityId,
         title: entityTitle,
@@ -61,6 +61,7 @@ export function ReferralDialog({
         toDepartmentId: parseInt(toDepartmentId),
         reason,
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "تم إنشاء الإحالة بنجاح", description: `تم إحالة ${entityType === 'task' ? 'المهمة' : 'التذكرة'} إلى ${otherDepts.find(d => d.id === parseInt(toDepartmentId))?.name}` });
@@ -71,8 +72,8 @@ export function ReferralDialog({
       setReason("");
       setPriority("medium");
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "حدث خطأ أثناء إنشاء الإحالة", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 
@@ -318,7 +319,8 @@ export function DepartmentReferralsSection({ departmentId, departmentName }: { d
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, rejectionReason: reason }: { id: number; status: string; rejectionReason?: string }) => {
-      return apiRequest("PUT", `/api/it-referrals/${id}/status`, { status, rejectionReason: reason });
+      const res = await apiRequest("PUT", `/api/it-referrals/${id}/status`, { status, rejectionReason: reason });
+      return res.json();
     },
     onSuccess: (_, variables) => {
       toast({ title: variables.status === "accepted" ? "تم قبول الإحالة وإنشاء مهمة للإدارة" : variables.status === "rejected" ? "تم رفض الإحالة" : "تم تحديث حالة الإحالة" });
@@ -327,6 +329,9 @@ export function DepartmentReferralsSection({ departmentId, departmentName }: { d
       queryClient.invalidateQueries({ queryKey: ["/api/it-referrals"] });
       setRejectingReferral(null);
       setRejectionReason("");
+    },
+    onError: (error: Error) => {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 

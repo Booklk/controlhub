@@ -167,26 +167,28 @@ export default function DepartmentProjectsPage({ config }: DepartmentProjectsPag
 
   const createProjectMutation = useMutation({
     mutationFn: async (data: InfrastructureProjectFormData) => {
-      return apiRequest('POST', '/api/it-projects', {
+      const res = await apiRequest('POST', '/api/it-projects', {
         ...data,
         departmentId: departmentId,
         progress: Number(data.progress) || 0,
         budget: data.budget ? Number(data.budget) : undefined,
       });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/it-projects?departmentId=${departmentId}`] });
       setCreatedProjectName(addForm.getValues('name'));
       addForm.reset();
     },
-    onError: (error: any) => {
-      toast({ title: 'فشل في إنشاء المشروع', description: error?.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'فشل في إنشاء المشروع', description: error.message, variant: 'destructive' });
     },
   });
 
   const updateProjectMutation = useMutation({
     mutationFn: async (data: DepartmentProject) => {
-      return apiRequest('PUT', `/api/it-projects/${data.id}`, data);
+      const res = await apiRequest('PUT', `/api/it-projects/${data.id}`, data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/it-projects?departmentId=${departmentId}`] });
@@ -195,21 +197,22 @@ export default function DepartmentProjectsPage({ config }: DepartmentProjectsPag
       editForm.reset();
       toast({ title: 'تم تحديث المشروع بنجاح' });
     },
-    onError: (error: any) => {
-      toast({ title: 'فشل في تحديث المشروع', description: error?.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'فشل في تحديث المشروع', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: number) => {
-      return apiRequest('DELETE', `/api/it-projects/${projectId}`);
+      const res = await apiRequest('DELETE', `/api/it-projects/${projectId}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/it-projects?departmentId=${departmentId}`] });
       toast({ title: 'تم حذف المشروع بنجاح' });
     },
-    onError: (error: any) => {
-      toast({ title: 'فشل في حذف المشروع', description: error?.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'فشل في حذف المشروع', description: error.message, variant: 'destructive' });
     },
   });
 
