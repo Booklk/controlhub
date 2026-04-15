@@ -81,6 +81,28 @@ export function registerAuthRoutes(app: Express) {
         }
       } catch (_) {}
 
+      // تصحيح تلقائي: مزامنة role و portal مع الإدارة الحالية
+      const DEPT_SYNC: Record<number, { staff: string; manager: string; portal: string }> = {
+        5: { staff: 'dmo_staff', manager: 'dmo_manager', portal: 'dmo' },
+        9: { staff: 'it_infrastructure_staff', manager: 'it_infrastructure_manager', portal: 'infrastructure' },
+        10: { staff: 'it_cybersecurity_staff', manager: 'it_cybersecurity_manager', portal: 'cybersecurity' },
+        11: { staff: 'it_digital_staff', manager: 'it_digital_manager', portal: 'digital_transformation' },
+        12: { staff: 'it_support_staff', manager: 'it_support_manager', portal: 'support' },
+      };
+      const globalRoles = ['system_admin', 'admin', 'it_director', 'employee', 'auditor'];
+      if (user.itDepartmentId && DEPT_SYNC[user.itDepartmentId] && !globalRoles.includes(user.role)) {
+        const expected = DEPT_SYNC[user.itDepartmentId];
+        const isManager = user.role?.includes('manager');
+        const correctRole = isManager ? expected.manager : expected.staff;
+        const correctPortal = expected.portal;
+        if (user.role !== correctRole || user.portal !== correctPortal) {
+          await storage.updateUser(user.id, { role: correctRole, portal: correctPortal });
+          user.role = correctRole;
+          user.portal = correctPortal;
+          logger.info(`[Auth] Auto-synced user ${user.email}: role=${correctRole}, portal=${correctPortal}, dept=${user.itDepartmentId}`);
+        }
+      }
+
       const tokenId = crypto.randomBytes(16).toString('hex');
       const accessToken = jwt.sign(
         { 
