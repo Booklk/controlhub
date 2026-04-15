@@ -375,6 +375,10 @@ export function registerCommitteeRoutes(app: Express) {
       if (decision.status !== 'voting') {
         return res.status(400).json({ error: 'التصويت غير مفتوح لهذا القرار' });
       }
+      // منع منشئ القرار من التصويت على قراره (تضارب مصالح)
+      if (decision.createdBy === req.user.id) {
+        return res.status(403).json({ error: 'لا يمكنك التصويت على قرار أنشأته بنفسك' });
+      }
 
       let [member] = await db.select().from(committeeMembers)
         .where(and(

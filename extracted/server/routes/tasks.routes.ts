@@ -224,6 +224,14 @@ export function registerTaskRoutes(app: Express) {
       if (!taskData.title || !taskData.title.trim()) {
         return res.status(400).json({ error: 'عنوان المهمة مطلوب' });
       }
+      // تحقق: تاريخ الاستحقاق لا يكون بالماضي
+      if (taskData.dueDate) {
+        const due = new Date(taskData.dueDate);
+        const today = new Date(); today.setHours(0,0,0,0);
+        if (due < today) {
+          return res.status(400).json({ error: 'تاريخ الاستحقاق لا يمكن أن يكون بالماضي' });
+        }
+      }
       taskData.title = taskData.title.trim();
       if (taskData.description) taskData.description = taskData.description.trim();
 

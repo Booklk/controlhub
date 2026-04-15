@@ -418,7 +418,20 @@ export function registerAdminRoutes(app: Express) {
       if (existingUser.email?.toLowerCase() === 'controlhub@jcsa.sa') {
         return res.status(403).json({ error: 'لا يمكن حذف حساب مدير النظام الرئيسي' });
       }
-      
+
+      // فحص التذاكر والمهام المسندة
+      const [activeWork] = await db.execute(sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM it_tickets WHERE assignee_id = ${userId} AND status IN ('open','assigned','in_progress')) as open_tickets,
+          (SELECT COUNT(*)::int FROM tasks WHERE assigned_to = ${userId} AND status IN ('pending','in_progress') AND deleted_at IS NULL) as active_tasks
+      `);
+      const work = (activeWork as any).rows?.[0] || (activeWork as any)[0] || {};
+      const openTickets = Number(work.open_tickets) || 0;
+      const activeTasks = Number(work.active_tasks) || 0;
+      if (openTickets > 0 || activeTasks > 0) {
+        return res.status(400).json({ error: `لا يمكن حذف المستخدم — لديه ${openTickets} تذكرة مفتوحة و ${activeTasks} مهمة نشطة. أعد إسنادها أولاً` });
+      }
+
       await storage.deleteUser(userId);
       
       await storage.createAuditLog({
