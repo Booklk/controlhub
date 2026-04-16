@@ -65,7 +65,10 @@ export function SmartDailyOps({
   });
 
   const acknowledgeMutation = useMutation({
-    mutationFn: async (id: number) => { const res = await apiRequest('POST', `/api/it-referrals/${id}/acknowledge`, { note: 'تم تأكيد الاستلام' }),
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('POST', `/api/it-referrals/${id}/acknowledge`, { note: 'تم تأكيد الاستلام' });
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/daily-ops', portal] });
       queryClient.invalidateQueries({ queryKey: ['/api/it-referrals'] });

@@ -135,7 +135,10 @@ export default function TicketDetailPanel({
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details');
 
   const statusMutation = useMutation({
-    mutationFn: async (status: string) => { const res = await apiRequest('PUT', `/api/it-tickets/${ticket?.id}/status`, { status }),
+    mutationFn: async (status: string) => {
+      const res = await apiRequest('PUT', `/api/it-tickets/${ticket?.id}/status`, { status });
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/it-tickets'] });
       if (queryKey) queryClient.invalidateQueries({ queryKey: [queryKey] });
